@@ -1,0 +1,71 @@
+// TODO: make proxy URL configurable (env var or extension settings page)
+const PROXY_URL = 'http://localhost:8000';
+
+const form = document.getElementById('prompt-form');
+const input = document.getElementById('prompt-input');
+const sendBtn = document.getElementById('send-btn');
+const voiceBtn = document.getElementById('voice-btn');
+const responseArea = document.getElementById('response-area');
+const spinner = document.getElementById('spinner');
+const closeBtn = document.getElementById('close-btn');
+
+// Close button collapses the sidebar via postMessage to content.js
+closeBtn.addEventListener('click', () => {
+  window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
+});
+
+// Voice button placeholder — Sprint 2
+voiceBtn.addEventListener('click', () => {
+  alert('Voice input is coming in Sprint 2.');
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const prompt = input.value.trim();
+  if (!prompt) return;
+
+  // Display user message
+  appendMessage(prompt, 'user');
+  input.value = '';
+
+  // Loading state
+  setLoading(true);
+
+  try {
+    // TODO Sprint 2: attach patient context extracted from current EMR page
+    // TODO Sprint 2: enable streaming (ReadableStream) for faster perceived response
+    // TODO Sprint 2: maintain conversation history (send prior turns to proxy)
+    const resp = await fetch(`${PROXY_URL}/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    appendMessage(data.response, 'assistant');
+  } catch (err) {
+    appendMessage(`Error: ${err.message}`, 'error');
+  } finally {
+    setLoading(false);
+  }
+});
+
+function appendMessage(text, role) {
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.textContent = text;
+  responseArea.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function setLoading(loading) {
+  sendBtn.disabled = loading;
+  input.disabled = loading;
+  spinner.classList.toggle('hidden', !loading);
+}

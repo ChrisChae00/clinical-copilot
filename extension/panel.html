@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clinical Ally</title>
+  <link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+  <div id="panel">
+    <header id="panel-header">
+      <span id="panel-title">Clinical Ally</span>
+      <button id="close-btn" aria-label="Close sidebar" title="Close">✕</button>
+    </header>
+
+    <main id="panel-body">
+      <div id="response-area" aria-live="polite" aria-label="AI responses"></div>
+      <div id="spinner" class="spinner hidden" aria-label="Loading"></div>
+    </main>
+
+    <footer id="panel-footer">
+      <form id="prompt-form" autocomplete="off">
+        <button
+          id="voice-btn"
+          type="button"
+          aria-label="Voice input (coming soon)"
+          title="Voice input — Coming in Sprint 2"
+          disabled
+        >🎤</button>
+        <input
+          id="prompt-input"
+          type="text"
+          placeholder="Ask a clinical question…"
+          aria-label="Clinical question"
+          autocomplete="off"
+          spellcheck="true"
+        />
+        <button id="send-btn" type="submit" aria-label="Send">Send</button>
+      </form>
+    </footer>
+  </div>
+  <script src="panel.js"></script>
+</body>
+</html>
