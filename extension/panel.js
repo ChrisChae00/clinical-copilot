@@ -14,9 +14,16 @@ closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
 });
 
-// Voice button placeholder — Sprint 2
+// TODO: Implement voice input functionality
+// 1. Check for browser support (e.g., window.SpeechRecognition || window.webkitSpeechRecognition).
+// 2. Request microphone permissions from the user.
+// 3. Initialize the Web Speech API and start listening for audio input.
+// 4. Provide visual feedback (e.g., pulsating mic icon, color change) while recording.
+// 5. Handle the 'result' event: extract the transcript and append it to `input.value`.
+// 6. Handle errors (e.g., 'not-allowed', 'no-speech') gracefully.
+// 7. Stop recognition when the user stops speaking or clicks the button again.
 voiceBtn.addEventListener('click', () => {
-  alert('Voice input is coming in Sprint 2.');
+  console.log('Voice input requested. Functionality is pending implementation.');
 });
 
 form.addEventListener('submit', async (e) => {

@@ -130,45 +130,67 @@ body {
 
 #prompt-form {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
-#voice-btn {
-  flex: 0 0 32px;
-  height: 32px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #f3f4f6;
-  cursor: not-allowed;
-  font-size: 14px;
-  opacity: 0.5;
+.input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 #prompt-input {
-  flex: 1;
-  height: 32px;
-  padding: 0 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 40px 0 14px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 18px;
   font-size: 13px;
   outline: none;
   color: #1a1a1a;
+  background-color: #f9fafb;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
 }
 
 #prompt-input:focus {
   border-color: #0066cc;
   box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+  background-color: #fff;
+}
+
+#voice-btn {
+  position: absolute;
+  right: 6px;
+  flex: 0 0 28px;
+  height: 28px;
+  width: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+#voice-btn:hover {
+  color: #0066cc;
+  background-color: rgba(0, 102, 204, 0.1);
 }
 
 #send-btn {
   flex: 0 0 auto;
-  height: 32px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 16px;
   background: #0066cc;
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 18px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
