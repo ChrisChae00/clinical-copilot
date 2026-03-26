@@ -17,8 +17,7 @@ Built with FastAPI and deployed in a Docker container.
 See `docker-compose.yml` and for environment variables such as API key and model. 
 
 ## Routes
-- POST `/generate`: takes a JSON body with a "prompt" field and returns the LLM response.
-
 - GET `/health`: checks if the Ollama server is running.
-
+- POST `/generate`: takes a JSON body with a "prompt" field and returns the LLM response.
+- POST `/process-context`: take the DOM and current context and return a combined context.
 

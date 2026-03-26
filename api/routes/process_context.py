@@ -1,6 +1,22 @@
 """
 This module defines the API endpoint for processing the DOM into context
 that can be used by the LLM.
+
+example curl request:
+    curl -X POST "http://localhost:8000/process-context" \
+        -H "Content-Type: application/json" \
+            -H "X-API-Key: your_api_key_here" \
+            -d '{
+
+                "html": "<html>...</html>",
+                "current-context": { ...json... }
+            }'
+
+example response:
+    {
+        "complete_context": { ...json... }
+    }
+
 """
 
 import json
@@ -43,8 +59,9 @@ Your most important goals are:
 - keep the context complete, concise, and reusable
 
 ### HARD OUTPUT REQUIREMENTS ###
-- Return ONLY valid JSON.
+- Return ONLY valid JSON. Nothing else.
 - Return EXACTLY ONE JSON object.
+- Do NOT output multiple JSON objects.
 - Do NOT use markdown.
 - Do NOT use code fences.
 - Do NOT include explanations, commentary, notes, apologies, or reasoning.
@@ -54,6 +71,8 @@ Your most important goals are:
 - The returned JSON object is the COMPLETE updated context, not a diff, patch, delta, or partial update.
 - Never return instructions, analysis, or a description of what you did.
 - Never return a schema description instead of the actual context object.
+- Every value in the JSON must itself be valid JSON.
+- Do NOT use expressions like 140/90. If a value is not a plain JSON number, encode it as a string.
 
 ### CORE BEHAVIOR ###
 1. Treat CURRENT_CONTEXT as the existing source of accumulated context.
@@ -183,20 +202,22 @@ HTML:
 {{HTML}}
 """
 
-REPAIR_PROMPT_TEMPLATE = """The previous response was not valid JSON.
-
-Return the same intended COMPLETE UPDATED CONTEXT again, but this time as ONLY valid JSON.
+JSON_REPAIR_PROMPT_TEMPLATE = """Fix the following JSON so that it is valid.
 
 Rules:
-- Return ONLY valid JSON
+- Return ONLY valid JSON. Nothing else.
 - Return EXACTLY ONE JSON object
+- Do NOT output multiple JSON objects
 - Do NOT use markdown
 - Do NOT use code fences
 - Do NOT include any explanation or extra text
 - The first character must be {
 - The last character must be }
+- Every value must be valid JSON
+- If a value is not a plain number, encode it as a string
+- Expressions like 140/90 are invalid JSON and must be strings like "140/90"
 
-Previous invalid response:
+Invalid JSON:
 {{INVALID_RESPONSE}}
 """
 
@@ -225,7 +246,7 @@ def build_json_repair_prompt(invalid_response: str) -> str:
     """
     Build a repair prompt if the first LLM response is not valid JSON.
     """
-    prompt = REPAIR_PROMPT_TEMPLATE
+    prompt = JSON_REPAIR_PROMPT_TEMPLATE
     prompt = prompt.replace("{{INVALID_RESPONSE}}", invalid_response)
     return prompt
 
@@ -264,10 +285,7 @@ def extract_ollama_response(ollama_response: dict) -> str:
 
 
 def parse_complete_context(response_text: str):
-    """
-    Parse the LLM response as json and ensure the result is a json object.
-    If not valid json, raises an err
-    """
+
     try:
         parsed = json.loads(response_text)
     except json.JSONDecodeError as exc:
@@ -288,14 +306,18 @@ async def process_context(request: Request):
 
     It sends both to the LLM, which returns a complete updated context object.
 
-    Example request body:
-
+    example request body:
     {
-      "html": "<html>...</html>",
-      "current-context": null
+        "html": "<html>...</html>",
+        "current-context": { ...json... }
     }
-    """
 
+    example response body:
+    {
+        "complete_context": { ...json... }
+    }
+
+    """
     # receive html and current context
     try:
         body = await request.json()
@@ -330,11 +352,15 @@ async def process_context(request: Request):
             complete_context = parse_complete_context(llm_response_text)
 
         # if parsing fails, try with a repair prompt
-        except ValueError as e:
-            # build repair prompt and call llm again
+        except ValueError:
+            print("DEBUG: POST /process-context")
+            print("Raw LLM response before repair:")
+            print(llm_response_text)
             repair_prompt = build_json_repair_prompt(llm_response_text)
             repair_ollama_response = await get_llm_response(repair_prompt)
             repair_response_text = extract_ollama_response(repair_ollama_response)
+            print("Raw LLM response after repair:")
+            print(repair_response_text)
             complete_context = parse_complete_context(repair_response_text)
 
     except ValueError as e:
