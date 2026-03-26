@@ -17,7 +17,7 @@ services:
     environment:
       OLLAMA_URL: http://ollama:11434
       API_KEY: api-key-placeholder
-      OLLAMA_MODEL: tinyllama #llama3.2:1b 
+      OLLAMA_MODEL: llama3.2:1b 
     volumes:
       - ./api:/app
     depends_on:
