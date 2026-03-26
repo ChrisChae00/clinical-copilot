@@ -1,5 +1,5 @@
 services:
-  ollama: 
+  ollama:
     image: ollama/ollama:latest
     container_name: ally-ollama
     ports:
@@ -8,8 +8,15 @@ services:
       OLLAMA_HOST: 0.0.0.0:11434
     volumes:
       - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
-  api-server: 
+  api-server:
     build: ./api
     container_name: ally-api
     ports:
@@ -17,7 +24,7 @@ services:
     environment:
       OLLAMA_URL: http://ollama:11434
       API_KEY: api-key-placeholder
-      OLLAMA_MODEL: llama3.2:1b 
+      OLLAMA_MODEL: llama3.2:1b
     volumes:
       - ./api:/app
     depends_on:

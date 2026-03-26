@@ -10,6 +10,8 @@ Built with FastAPI and deployed in a Docker container.
 2. Pull the model in Ollama (may take a while depending on the model):
 `docker compose exec ollama ollama pull llama3.2:1b`
 
+    **Note**: GPU access only work for Docker with WSL2. Benchmark: 
+    `docker run --rm -it --gpus=all nvcr.io/nvidia/k8s/cuda-sample:nbody nbody -gpu -benchmark`
 
 ## Configuration
 See `docker-compose.yml` and for environment variables such as API key and model. 
