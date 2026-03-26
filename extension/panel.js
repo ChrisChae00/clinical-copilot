@@ -1,5 +1,6 @@
 // TODO: make proxy URL configurable (env var or extension settings page)
-const PROXY_URL = 'http://localhost:8000';
+const API_URL = 'http://localhost:8000';
+const API_KEY = 'api-key-placeholder';
 
 const form = document.getElementById('prompt-form');
 const input = document.getElementById('prompt-input');
@@ -35,7 +36,7 @@ form.addEventListener('submit', async (e) => {
   // Display user message
   appendMessage(prompt, 'user');
   input.value = '';
-
+  
   // Loading state
   setLoading(true);
 
@@ -43,10 +44,13 @@ form.addEventListener('submit', async (e) => {
     // TODO Sprint 2: attach patient context extracted from current EMR page
     // TODO Sprint 2: enable streaming (ReadableStream) for faster perceived response
     // TODO Sprint 2: maintain conversation history (send prior turns to proxy)
-    const resp = await fetch(`${PROXY_URL}/ask`, {
+    const resp = await fetch(`${API_URL}/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': API_KEY
+      },
+      body: JSON.stringify({ prompt })
     });
 
     if (!resp.ok) {
