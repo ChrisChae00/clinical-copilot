@@ -1,0 +1,27 @@
+services:
+  ollama: 
+    image: ollama/ollama:latest
+    container_name: ally-ollama
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ollama_data:/root/.ollama
+
+  api-server: 
+    build: ./api
+    container_name: ally-api
+    ports:
+      - "8000:8000"
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      API_KEY: api-key-placeholder
+      OLLAMA_MODEL: tinyllama #llama3.2:1b 
+    volumes:
+      - ./api:/app
+    depends_on:
+      - ollama
+
+volumes:
+  ollama_data:
