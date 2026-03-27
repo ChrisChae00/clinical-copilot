@@ -1,12 +1,24 @@
 """
 Main API server for handling requests
+
+example request:
+
+POST http://localhost:8000/generate-str
+Content-Type: application/json
+X-API-Key: api-key-placeholder
+
+{
+  "prompt": "hi?"
+}
+
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import APIKeyHeader
-from routes.generate import router as generate_router
+from routes.generate_json import router as generate_json_router
+from routes.generate_str import router as generate_str_router
 from routes.health import router as health_router
+from routes.process_context import router as process_context_router
 
 app = FastAPI(title="Ally API")
 
@@ -22,4 +34,6 @@ app.add_middleware(
 
 # routes
 app.include_router(health_router)
-app.include_router(generate_router)
+app.include_router(generate_str_router)
+app.include_router(generate_json_router)
+app.include_router(process_context_router)

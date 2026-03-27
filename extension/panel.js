@@ -44,7 +44,7 @@ form.addEventListener('submit', async (e) => {
     // TODO Sprint 2: attach patient context extracted from current EMR page
     // TODO Sprint 2: enable streaming (ReadableStream) for faster perceived response
     // TODO Sprint 2: maintain conversation history (send prior turns to proxy)
-    const resp = await fetch(`${API_URL}/generate`, {
+    const resp = await fetch(`${API_URL}/generate-str`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ form.addEventListener('submit', async (e) => {
     }
 
     const data = await resp.json();
-    appendMessage(data.response, 'assistant');
+    appendMessage(data, 'assistant');
   } catch (err) {
     appendMessage(`Error: ${err.message}`, 'error');
   } finally {
