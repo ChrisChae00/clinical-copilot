@@ -18,7 +18,8 @@ See `docker-compose.yml` and for environment variables such as API key and model
 
 ## Routes 
 - GET `/health`: checks if the Ollama server is running.
-- POST `/generate`: takes a JSON body with a "prompt" field and returns the LLM response.
-- POST `/process-context`: take the DOM and current context and return a combined context.
+- POST `/generate-str`: takes a prompt and generation parameters, returns generated string from the model.
+- POST `/generate-json`: takes a prompt and generation parameters, returns generated JSON from the model (format: json mode).
+- WIP POST `/process-context`: take the DOM and current context and return a combined context.
 > Route detail definitions and example requests in `api/routes/` folder.
 

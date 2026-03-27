@@ -3,7 +3,7 @@ Main API server for handling requests
 
 example request:
 
-POST http://localhost:8000/generate
+POST http://localhost:8000/generate-str
 Content-Type: application/json
 X-API-Key: api-key-placeholder
 
