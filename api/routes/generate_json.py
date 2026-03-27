@@ -1,27 +1,20 @@
 """
-This module defines the /generate endpoint for the API, which takes a prompt and returns a response from the LLM.
+This module defines the /generate-json endpoint for the API,
+
+which takes a prompt and returns a json response from the LLM.
 """
 
 from auth import require_api_key
 from fastapi import APIRouter, Depends, HTTPException, Request
-from llm.client import get_llm_response
+from llm.client import get_llm_response_json
 
 router = APIRouter()
 
 
-@router.post("/generate", dependencies=[Depends(require_api_key)])
-async def generate(request: Request):
+@router.post("/generate-json", dependencies=[Depends(require_api_key)])
+async def generate_json(request: Request):
     """
-    /generate endpoint that takes a JSON body with a "prompt" field and returns the LLM response
-
-    Example request body:
-
-    {
-    "prompt": "What da dawg doing?"
-    }
-
-    Example curl command:
-    curl -X POST http://localhost:8000/generate -H "Content-Type: application/json" -H "X-API-Key: api-key-placeholder" -d "{\"prompt\":\"New fone, who dis?\"}"
+    /generate-json endpoint that takes a JSON body with a "prompt" field and returns the LLM response
 
     """
 
@@ -38,7 +31,7 @@ async def generate(request: Request):
         )
 
     try:
-        return await get_llm_response(prompt=prompt)
+        return await get_llm_response_json(prompt=prompt)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except RuntimeError as e:
