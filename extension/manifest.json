@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Clinical Ally",
+  "version": "0.1.0",
+  "description": "AI co-pilot sidebar for OpenEMR — runs entirely on localhost",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["panel.html", "panel.css", "panel.js"],
+      "matches": ["*://localhost/*", "*://localhost:8080/*", "*://localhost:8443/*", "*://localhost:8000/*"]
+    }
+  ],
+  "host_permissions": [
+    "*://localhost/*",
+    "*://localhost:8080/*",
+    "*://localhost:8000/*"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "clinical-ally@localhost"
+    }
+  }
+}
