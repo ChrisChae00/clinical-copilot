@@ -16,52 +16,36 @@ Browser Extension → FastAPI (:8000) → Ollama (:11434)
 |---|---|---|
 | Firefox | 109+ | Manifest V3 support |
 | Python | 3.10+ | For the proxy server |
-| Ollama | latest | Runs llama3 locally |
+| Ollama | latest | Runs granite4 locally |
 | OSCAR EMR | any | Running at `localhost:8080/oscar/` |
 
 ---
 
 ## Quick Start
 
-### 1 — Set up Ollama
+### 1 — Start the API server
 
-See [`docs/ollama-setup.md`](docs/ollama-setup.md) for full instructions.
+The API server runs in Docker and includes Ollama.
 
-**macOS**
+**Mac / no GPU:**
 ```bash
-brew install ollama
-ollama pull llama3
-ollama serve   # keep this terminal open
+docker compose up --build
 ```
 
-**Linux**
+**Linux with Nvidia GPU (WSL2):**
 ```bash
-curl -fsSL https://ollama.com/install.sh | sh
-ollama pull llama3
-ollama serve   # keep this terminal open
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
-**Windows**
-1. Download the installer from https://ollama.com/download and run it
-2. Open **Command Prompt** or **PowerShell** and run:
-```powershell
-ollama pull llama3
-ollama serve
-```
-> Keep the Command Prompt / PowerShell window open while using Clinical Ally.
-
-### 2 — Start the proxy
+Then pull the model (may take a while):
 
 ```bash
-cd llm-proxy
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --port 8000 --reload
+docker compose exec ollama ollama pull granite4
 ```
 
 Verify: `curl -s http://localhost:8000/docs` should open the FastAPI docs.
 
-### 3 — Load the extension in Firefox
+### 2 — Load the extension in Firefox
 
 Firefox does not allow installing unsigned extensions permanently in standard mode.
 During development, use **Temporary Add-on** loading — the extension stays active until Firefox restarts.
@@ -84,7 +68,7 @@ During development, use **Temporary Add-on** loading — the extension stays act
 - Click **Inspect** next to Clinical Ally in `about:debugging` to open its DevTools console.
 - Any errors from `content.js`, `panel.js`, or failed network requests appear here.
 
-### 4 — Use Clinical Ally
+### 3 — Use Clinical Ally
 
 1. Navigate to your OSCAR EMR instance (e.g. `http://localhost:8080/oscar/`)
 2. The Clinical Ally sidebar appears as a tab on the right edge of the page.
@@ -98,24 +82,24 @@ During development, use **Temporary Add-on** loading — the extension stays act
 
 ## Testing the Extension
 
-### Verifying the proxy is reachable
+### Verifying the API is reachable
 
-Before testing the sidebar, confirm the proxy is accepting requests:
+Before testing the sidebar, confirm the API is accepting requests:
 
 ```bash
-curl -s -X POST http://localhost:8000/ask \
+curl -s http://localhost:8000/health
+```
+
+Send a test prompt:
+
+```bash
+curl -s -X POST http://localhost:8000/generate-str \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: api-key-placeholder" \
   -d '{"prompt": "What is hypertension? Reply in one sentence."}' | python3 -m json.tool
 ```
 
-Expected response:
-```json
-{
-    "response": "Hypertension is a chronic condition ..."
-}
-```
-
-If you see `503` or `502`, check that Ollama (or your remote LLM endpoint) is running and that `.env` credentials are correct.
+If you see `503` or `502`, check that the Docker containers are running (`docker compose ps`) and that the model has been pulled.
 
 ---
 
@@ -148,7 +132,8 @@ After widening the match (Option A), the Clinical Ally sidebar will appear on th
 Use this checklist to confirm the full stack is working before running automated tests:
 
 - [ ] `http://localhost:8000/docs` loads the FastAPI Swagger UI
-- [ ] The `POST /ask` curl command above returns a `response` field
+- [ ] `GET /health` returns 200
+- [ ] The `POST /generate-str` curl command above returns a response
 - [ ] The Clinical Ally add-on appears in `about:debugging` without errors
 - [ ] The sidebar tab is visible on the target page
 - [ ] Typing a question and pressing **Send** shows a loading indicator
@@ -180,13 +165,20 @@ clinical-copilot/
 │   ├── content.js              Injected into OSCAR pages — creates the shadow DOM host and iframe
 │   ├── panel.html              Sidebar UI markup (runs inside the iframe)
 │   ├── panel.css               Sidebar styles, scoped inside shadow DOM
-│   └── panel.js                Handles form submit, fetch to proxy, and response rendering
+│   └── panel.js                Handles form submit, fetch to API, and response rendering
 │
-├── llm-proxy/                  FastAPI backend — bridges extension and LLM
-│   ├── main.py                 Single POST /ask endpoint; forwards prompt to Ollama
-│   ├── requirements.txt        Python dependencies (fastapi, uvicorn, httpx)
-│   ├── .env                    Local secrets — not committed (see .env.example)
-│   └── .env.example            Template for OLLAMA_URL and Cloudflare Access credentials
+├── api/                        FastAPI backend — bridges extension and LLM (Docker)
+│   ├── main.py                 App entrypoint; registers all routes
+│   ├── docker-compose.yml      Runs FastAPI + Ollama containers
+│   ├── routes/
+│   │   ├── health.py           GET /health
+│   │   ├── generate_str.py     POST /generate-str — returns plain text response
+│   │   ├── generate_json.py    POST /generate-json — returns JSON response
+│   │   └── process_context.py  POST /process-context (WIP) — merges DOM + context
+│   ├── llm/
+│   │   ├── client.py           Ollama API client
+│   │   └── prompts.py          System prompts
+│   └── auth.py                 API key authentication
 │
 ├── tests/                      Playwright end-to-end tests
 │   ├── conftest.py             Firefox browser fixture
