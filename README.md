@@ -27,8 +27,14 @@ Browser Extension → FastAPI (:8000) → Ollama (:11434)
 
 The API server runs in Docker and includes Ollama.
 
+**Mac / no GPU:**
 ```bash
 docker compose up --build
+```
+
+**Linux with Nvidia GPU (WSL2):**
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
 Then pull the model (may take a while):
@@ -36,8 +42,6 @@ Then pull the model (may take a while):
 ```bash
 docker compose exec ollama ollama pull granite4
 ```
-
-> **GPU note:** GPU access only works with Docker on WSL2.
 
 Verify: `curl -s http://localhost:8000/docs` should open the FastAPI docs.
 
