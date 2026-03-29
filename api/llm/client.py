@@ -62,11 +62,11 @@ async def get_llm_response_str(prompt: str) -> str:
             f"Ollama returned status code {response.status_code}: {response.text}"
         )
 
-    reponse_text = response.json().get("response", "")
-    if not isinstance(reponse_text, str):
+    response_text = response.json().get("response", "")
+    if not isinstance(response_text, str):
         raise RuntimeError("Ollama response is not a string")
 
-    return reponse_text
+    return response_text
 
 
 # json version
@@ -81,6 +81,9 @@ async def get_llm_response_json(
     - system_prompt (str)
     returns:
     - response (dict/json)
+    raises:
+        ValueError: If the prompt is invalid
+        RuntimeError: If there is an issue communicating with Ollama or if the LLM returns invalid JSON
 
     note: system_prompt is optional. It default to SYSTEM_PROMPT.
     """
@@ -107,10 +110,18 @@ async def get_llm_response_json(
         )
 
     # get response field (still str)
-    response_json_str = response.json().get("response", "")
+    try:
+        response_json_str = response.json().get("response", "")
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Ollama returned a non-JSON HTTP response body: {e}") from e
 
     # parse the response string as json
-    response_json = json.loads(response_json_str)
+    try:
+        response_json = json.loads(response_json_str)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(
+            f"LLM response could not be parsed as JSON. Raw: {response_json_str!r}. Error: {e}"
+        ) from e
 
     return response_json
 
@@ -124,5 +135,9 @@ async def is_ollama_healthy() -> bool:
             response = await client.get(f"{OLLAMA_URL}/api/tags")
             response.raise_for_status()
         return True
-    except Exception:
+    except httpx.RequestError as e:
+        print(f"WARNING: Ollama health check failed (network): {e}")
+        return False
+    except httpx.HTTPStatusError as e:
+        print(f"WARNING: Ollama health check failed (status {e.response.status_code}): {e}")
         return False

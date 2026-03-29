@@ -4,6 +4,8 @@ This module defines the /generate-json endpoint for the API,
 which takes a prompt and returns a json response from the LLM.
 """
 
+import json
+
 from auth import require_api_key
 from fastapi import APIRouter, Depends, HTTPException, Request
 from llm.client import get_llm_response_json
@@ -20,7 +22,7 @@ async def generate_json(request: Request):
 
     try:
         body = await request.json()
-    except Exception:
+    except (ValueError, json.JSONDecodeError):
         raise HTTPException(status_code=400, detail="Request body must be valid JSON")
 
     prompt = body.get("prompt")

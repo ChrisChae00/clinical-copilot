@@ -115,16 +115,11 @@ async def process_context(request: Request):
             detail="Request body must be valid JSON",
         ) from e
 
-    if not isinstance(body, dict):
-        raise HTTPException(
-            status_code=400, detail="Request body must be a JSON object"
-        )
     html, current_context = extract_process_context_body(body)
     prompt = build_process_context_prompt(html=html, current_context=current_context)
 
     # call llm
     try:
-        print(SYSTEM_PROMPT_PROCESS_CONTEXT)
         complete_context = await get_llm_response_json(
             prompt=prompt,
             system_prompt=SYSTEM_PROMPT_PROCESS_CONTEXT,
@@ -132,8 +127,6 @@ async def process_context(request: Request):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except RuntimeError as e:
-        raise HTTPException(status_code=502, detail=str(e)) from e
-    except Exception as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
     if not isinstance(complete_context, dict):
