@@ -5,7 +5,7 @@ Client that interfaces with the LLM (Ollama)
 import json
 
 import httpx
-from config import MODEL_NAME, OLLAMA_URL
+from config import MAX_CONTEXT_LEN, MODEL_NAME, OLLAMA_URL
 from llm.prompts import SYSTEM_PROMPT
 
 
@@ -49,6 +49,7 @@ async def get_llm_response_str(prompt: str) -> str:
         "system": SYSTEM_PROMPT,
         "prompt": prompt,
         "stream": False,
+        "options": {"num_ctx": MAX_CONTEXT_LEN},
     }
 
     try:
@@ -96,6 +97,7 @@ async def get_llm_response_json(
         "prompt": prompt,
         "stream": False,
         "format": "json",
+        "options": {"num_ctx": MAX_CONTEXT_LEN},
     }
 
     try:
@@ -139,5 +141,7 @@ async def is_ollama_healthy() -> bool:
         print(f"WARNING: Ollama health check failed (network): {e}")
         return False
     except httpx.HTTPStatusError as e:
-        print(f"WARNING: Ollama health check failed (status {e.response.status_code}): {e}")
+        print(
+            f"WARNING: Ollama health check failed (status {e.response.status_code}): {e}"
+        )
         return False

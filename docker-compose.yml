@@ -19,6 +19,7 @@ services:
       OLLAMA_URL: http://ollama:11434
       API_KEY: api-key-placeholder
       OLLAMA_MODEL: granite4
+      MAX_CONTEXT_LEN: 32768
     volumes:
       - ./api:/app
     depends_on:
