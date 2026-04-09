@@ -5,12 +5,12 @@ This module defines the API endpoint for processing the DOM into context that ca
 
 It accepts:
 - "html": raw HTML of the current page
-- "current-context": the current accumulated context (json)
+- "context": the current accumulated context (json)
 
 example payload:
     {
         "html": "<html>...</html>",
-        "current-context": { ...json... }
+        "context": { ...json... }
     }
 
 example response:
@@ -38,7 +38,7 @@ def _extract_process_context_body(body) -> tuple[str, object]:
     example payload:
     {
         "html": "<html>...</html>",
-        "current-context": { ...json... }
+        "context": { ...json... }
     }
 
     example return:
@@ -54,7 +54,7 @@ def _extract_process_context_body(body) -> tuple[str, object]:
         )
 
     html = body.get("html")
-    current_context = body.get("current-context", None)
+    current_context = body.get("context", None)
 
     if not isinstance(html, str) or not html.strip():
         raise HTTPException(
@@ -88,14 +88,14 @@ async def process_context(request: Request):
     """
     /process-context endpoint that takes a JSON body with:
     - "html": raw HTML of the current page
-    - "current-context": the current accumulated context (any JSON value)
+    - "context": the current accumulated context (any JSON value)
 
     It sends both to the LLM, which returns a complete updated context object.
 
     example request body:
     {
         "html": "<html>...</html>",
-        "current-context": { ...json... }
+        "context": { ...json... }
     }
 
     """
