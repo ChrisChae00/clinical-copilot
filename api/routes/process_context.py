@@ -15,7 +15,7 @@ example payload:
 
 example response:
     {
-        "complete_context": { ...json... }
+        JSON
     }
 
 """
@@ -23,6 +23,7 @@ example response:
 import json
 
 from auth import require_api_key
+from dom.dom_processor import process_dom
 from fastapi import APIRouter, Depends, HTTPException, Request
 from llm.client import get_llm_response_json
 from llm.prompts import SYSTEM_PROMPT_PROCESS_CONTEXT
@@ -30,7 +31,7 @@ from llm.prompts import SYSTEM_PROMPT_PROCESS_CONTEXT
 router = APIRouter()
 
 
-def extract_process_context_body(body) -> tuple[str, object]:
+def _extract_process_context_body(body) -> tuple[str, object]:
     """
     Helper function to validate and extract html and current_context from the request body.
 
@@ -64,12 +65,9 @@ def extract_process_context_body(body) -> tuple[str, object]:
     return html, current_context
 
 
-def build_process_context_prompt(html: str, current_context: object | None) -> str:
-    """
-    Helper function that builds the main prompt for the context-processing LLM call.
-
-    Note: The system prompt contains the instructions (SYSTEM_PROMPT_PROCESS_CONTEXT). This prompt contains only the inputs.
-    """
+def _build_process_context_prompt(
+    processed_html: str, current_context: object | None
+) -> str:
     current_context_json = (
         json.dumps(current_context, ensure_ascii=False, indent=2)
         if current_context is not None
@@ -78,8 +76,8 @@ def build_process_context_prompt(html: str, current_context: object | None) -> s
 
     return (
         "### INPUT ###\n"
-        "HTML:\n"
-        f"{html}\n\n"
+        "EXTRACTED_PAGE:\n"
+        f"{processed_html}\n\n"
         "CURRENT_CONTEXT:\n"
         f"{current_context_json}"
     )
@@ -100,11 +98,6 @@ async def process_context(request: Request):
         "current-context": { ...json... }
     }
 
-    example response body:
-    {
-        "complete_context": { ...json... }
-    }
-
     """
     # receive html and current context
     try:
@@ -115,8 +108,12 @@ async def process_context(request: Request):
             detail="Request body must be valid JSON",
         ) from e
 
-    html, current_context = extract_process_context_body(body)
-    prompt = build_process_context_prompt(html=html, current_context=current_context)
+    html, current_context = _extract_process_context_body(body)
+    processed_html = process_dom(html)
+    prompt = _build_process_context_prompt(
+        processed_html=processed_html,
+        current_context=current_context,
+    )
 
     # call llm
     try:

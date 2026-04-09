@@ -1,0 +1,4582 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+        <title>
+            Encounter
+        </title>
+        
+        <link rel="stylesheet" href="page_files/encounterStyles.css" type="text/css">
+
+        <link rel="stylesheet" type="text/css" href="page_files/jquery-ui-1.12.1.min.css">
+        <link rel="stylesheet" type="text/css" href="page_files/oscarRx.css">
+        <!-- calendar stylesheet -->
+        <link rel="stylesheet" type="text/css" media="all" href="page_files/calendar.css" title="win2k-cold-1">
+        <link rel="stylesheet" type="text/css" href="page_files/messenger.css">
+        <link rel="stylesheet" type="text/css" href="page_files/messenger-theme-future.css">
+        <link rel="stylesheet" href="page_files/encounterStyles.css" type="text/css">
+        <link rel="stylesheet" type="text/css" href="page_files/print.css" media="print">
+
+        <script type="text/javascript" src="page_files/jquery-1.7.1.min.js"></script>
+        <script type="text/javascript" src="page_files/jquery-ui-1.12.1.min.js"></script>
+        <script type="text/javascript">
+            jQuery.noConflict();
+        </script>
+
+        <script src="page_files/prototype.js" type="text/javascript"></script>
+        <script src="page_files/scriptaculous.js" type="text/javascript"></script><script type="text/javascript" src="page_files/builder.js"></script><script type="text/javascript" src="page_files/effects.js"></script><script type="text/javascript" src="page_files/dragdrop.js"></script><script type="text/javascript" src="page_files/controls.js"></script><script type="text/javascript" src="page_files/slider.js"></script><script type="text/javascript" src="page_files/sound.js"></script>
+
+        <script type="text/javascript" src="page_files/messenger.js"></script>
+        <script type="text/javascript" src="page_files/messenger-theme-future.js"></script>
+        <script type="text/javascript" src="page_files/newEncounterLayout.js.jsp"></script>
+
+            
+        <script src="page_files/popupmenu.js" type="text/javascript"></script>
+        <script src="page_files/menutility.js" type="text/javascript"></script>
+
+        <!-- main calendar program -->
+        <script type="text/javascript" src="page_files/calendar.js"></script>
+
+        <!-- language for the calendar -->
+        <script type="text/javascript" src="page_files/calendar-en.js"></script>
+
+        <!-- the following script defines the Calendar.setup helper function, which makes adding a calendar a matter of 1 or 2 lines of code. -->
+        <script type="text/javascript" src="page_files/calendar-setup.js"></script>
+
+        <!-- js window size utility funcs since prototype's funcs are buggy in ie6 -->
+        <script type="text/javascript" src="page_files/screen.js"></script>
+
+        <!-- scriptaculous based select box -->
+        <script type="text/javascript" src="page_files/select.js"></script>
+
+        <script type="text/javascript">
+            var Colour = {
+                prevention: '009999',
+                tickler: 'FF6600',
+                disease: '5A5A5A',
+                forms: '917611',
+                eForms: '008000',
+                documents: '476BB3',
+                labs: 'A0509C',
+                messages: '7F462C',
+                measurements: '344887',
+                consultation: '6C2DC7',
+                hrmDocuments: '6699CC',
+                allergy: 'C85A17',
+                rx: '7D2252',
+                omed: '306754',
+                riskFactors: '993333',
+                familyHistory: '006600',
+                unresolvedIssues: 'CC9900',
+                resolvedIssues: '151B8D',
+                episode: '045228',
+                pregancies: '045228',
+                contacts: '045228'
+            };
+        </script>
+
+
+<script type="text/javascript" src="page_files/validateTextInputs.js"></script>
+<!--js code for newCaseManagementView.jsp -->
+<script type="text/javascript" src="page_files/newCaseManagementView.js.jsp"></script>
+
+            
+        
+
+        
+
+        <script type="text/javascript">
+
+            jQuery(document).on("ready", function () {
+                
+            });
+
+
+            function assembleMainChartParams(displayFullChart) {
+
+                var params = "method=edit&ajaxview=ajaxView&fullChart=" + displayFullChart;
+                
+                params += "&from=casemgmt";
+                
+                params += "&chain=list";
+                
+                params += "&demographicNo=3001";
+                
+                params += "&providerNo=999998";
+                
+                params += "&reason=Tel\-Progress Note";
+                
+                params += "&reasonCode=";
+                
+                params += "&appointmentNo=";
+                
+                params += "&appointmentDate=";
+                
+                params += "&start_time=";
+                
+                params += "&apptProvider=999998";
+                
+                params += "&providerview=999998";
+                
+                params += "&OscarMsgTypeLink=null";
+                
+                params += "&msgType=null";
+                
+
+                return params;
+            }
+
+            function reorderNavBarElements(idToMove, afterThisId) {
+                var clone = jQuery("#" + idToMove).clone();
+                jQuery("#" + idToMove).remove();
+                clone.insertAfter(jQuery("#" + afterThisId));
+            }
+
+            function reorderNavBarElementsBefore(idToMove, beforeThisId) {
+                var clone = jQuery("#" + idToMove).clone();
+                jQuery("#" + idToMove).remove();
+                clone.insertBefore(jQuery("#" + beforeThisId));
+            }
+
+            function makeElement(type, attributes) {
+                var element = document.createElement(type);
+                if (attributes != null) {
+                    for (var i in attributes) {
+                        element.setAttribute(i, attributes[i]);
+                    }
+                }
+                return element;
+            }
+
+            function insertAfter(referenceNode, newNode) {
+                referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+            }
+
+
+            function addCppRow(rowNumber) {
+                if (!document.getElementById("divR" + rowNumber)) {
+                    var newDiv = makeElement('div', {'id': 'divR' + rowNumber});
+
+                    var i1 = makeElement('div', {'id': 'divR' + rowNumber + 'I1', 'class': 'topBox'});
+                    var i2 = makeElement('div', {'id': 'divR' + rowNumber + 'I2', 'class': 'topBox'});
+                    newDiv.appendChild(i1);
+                    newDiv.appendChild(i2);
+                    var prevRow = document.getElementById("divR" + (rowNumber - 1));
+                    insertAfter(prevRow, newDiv);
+                }
+            }
+
+            function removeCppRow(rowNumber) {
+                jQuery("#divR" + rowNumber).remove();
+            }
+
+            function hideCpp(title) {
+                jQuery("#" + title).remove();
+            }
+
+            function popColumn(url, div, params, navBar, navBarObj) {
+                params = "reloadURL=" + url + "&numToDisplay=6&cmd=" + params;
+
+                var objAjax = new Ajax.Request(
+                    url,
+                    {
+                        method: 'post',
+                        postBody: params,
+                        evalScripts: true,
+                        onSuccess: function (request) {
+                            $(div).update(request.responseText);
+
+                            if ($("leftColLoader") != null)
+                                Element.remove("leftColLoader");
+
+                            if ($("rightColLoader") != null)
+                                Element.remove("rightColLoader");
+                        },
+                        onFailure: function (request) {
+                            $(div).innerHTML = "<h3>" + div + "</h3>Error: " + request.status;
+                        }
+                    }
+                );
+            };
+
+            function addLeftNavDiv(name) {
+                var div = document.createElement("div");
+                div.className = "leftBox";
+                div.style.display = "block";
+                div.style.visiblity = "hidden";
+                div.id = name;
+                $("leftNavBar").appendChild(div);
+
+            }
+
+            function addRightNavDiv(name) {
+                var div = document.createElement("div");
+                div.className = "leftBox";
+                div.style.display = "block";
+                div.style.visiblity = "hidden";
+                div.id = name;
+                $("rightNavBar").appendChild(div);
+
+            }
+
+            function removeNavDiv(name) {
+                var tmpEl = document.getElementById(name);
+                tmpEl.parentNode.removeChild(tmpEl);
+            }
+
+            function reloadNav(name) {
+                var url = jQuery("#" + name + " input[name='reloadUrl']").val();
+                popColumn(url, name, name, null, null);
+            }
+
+            function addPrintOption(name, bean) {
+                var test1Str = "<img style=\"cursor: pointer;\" title=\"Print " + name + "\" id=\"img" + name + "\" alt=\"Print " + name + "\" onclick=\"return printInfo(this, 'extPrint" + name + "');\" src=\"" + ctx + "/oscarEncounter/graphics/printer.png\">&nbsp;" + name;
+                jQuery("#printDateRow").before("<tr><td></td><td>" + test1Str + "</tr></tr>");
+                jQuery("form[name='caseManagementEntryForm']").append("<input name=\"extPrint" + name + "\" id=\"extPrint" + name + "\" value=\"false\" type=\"hidden\"/>");
+                jQuery.ajax({
+                    url: ctx + "/casemgmt/ExtPrintRegistry.do?method=register&name=" + name + "&bean=" + bean,
+                    async: false,
+                    success: function (data) {
+                    }
+                });
+            }
+
+
+            
+            var appointmentNo = 0;
+            
+
+            var savedNoteId = 0;
+        </script>
+
+        <!-- set size of window if customized in preferences -->
+        
+
+        <!-- Instead of importing cme.js using the CME tag (as done in Oscar19/OscarPro), we are opting to directly import cme.js without utilizing the CME tag. -->
+        
+
+        <!-- base href="http://localhost:8080/oscar/" -->
+        <title>Encounter</title>
+        <script type="text/javascript">
+            ctx = "/oscar";
+            demographicNo = "3001";
+            providerNo = "999998";
+
+            socHistoryLabel = "oscarEncounter.socHistory.title";
+            medHistoryLabel = "oscarEncounter.medHistory.title";
+            onGoingLabel = "oscarEncounter.onGoing.title";
+            ;
+            remindersLabel = "oscarEncounter.reminders.title";
+            oMedsLabel = "oscarEncounter.oMeds.title";
+            famHistoryLabel = "oscarEncounter.famHistory.title";
+            riskFactorsLabel = "oscarEncounter.riskFactors.title";
+
+            quickChartMsg = "View Quick Chart";
+            fullChartMsg = "View Full Chart";
+            insertTemplateError = "Inserting template failed";
+            unsavedNoteWarning = "Your current note has not been saved.  Click OK to save it or Cancel to continue editing the current note.";
+            sessionExpiredError = "Session Expired";
+            unlockNoteError = "An error occurred while unlocking note";
+            filterError = "An error occurred while performing your filter request";
+            pastObservationDateError = "Observation date must be in the past";
+            encTimeError = "Encounter time and transportation time must be digital number only";
+            encMinError = "???oscarEncounter.encounterMinuteError.msg???";
+            assignIssueError = "At least one issue must be assigned to your note";
+            assignObservationDateError = "An observation date must be set for your note";
+
+            encTimeMandatoryMsg = "Encounter time and transportation time must be specified";
+            encTimeMandatory = false;
+
+            assignEncTypeError = "An encounter type must be set for your note";
+            savingNoteError = "Failed to save note!";
+            changeIssueMsg = "Change";
+            closeWithoutSaveMsg = "Are you sure you wish to close the encounter? Any unsaved data WILL BE LOST";
+            pickIssueMsg = "Please select an issue from the auto completion menu";
+            assignIssueMsg = "Assign";
+            updateIssueError = "An error occurred while updating issues. Most likely your session has expired. \nLog in again.  If problem persists, contact support";
+            unsavedNoteMsg = "There is an unsaved note for this client.  Click Ok to edit it.";
+            printDateMsg = "Both start date and end date must be specified";
+            printDateOrderMsg = "Beginning date must precede end date";
+            nothing2PrintMsg = "Nothing selected to print";
+            editUnsignedMsg = "This note has not been signed by the owner.  Are you sure you want to continue to edit?";
+            msgDraftSaved = "Draft Saved";
+            msgPasswd = "Password";
+            btnMsgUnlock = "Unlock";
+            editLabel = "Edit";
+            annotationLabel = "Annotation";
+            month[0] = "Jan";
+            month[1] = "Feb";
+            month[2] = "Mar";
+            month[3] = "Apr";
+            month[4] = "May";
+            month[5] = "Jun";
+            month[6] = "Jul";
+            month[7] = "Aug";
+            month[8] = "Sep";
+            month[9] = "Oct";
+            month[10] = "Nov";
+            month[11] = "Dec";
+
+
+            jQuery(window).on("load", function () {
+
+                viewFullChart(false);
+
+                var navBars = new navBarLoader();
+                navBars.load();
+
+                getPreferenceBasedEChart();
+
+                Calendar.setup({
+                    inputField: "printStartDate",
+                    ifFormat: "%d-%b-%Y",
+                    showsTime: false,
+                    button: "printStartDate_cal",
+                    singleClick: true,
+                    step: 1
+                });
+                Calendar.setup({
+                    inputField: "printEndDate",
+                    ifFormat: "%d-%b-%Y",
+                    showsTime: false,
+                    button: "printEndDate_cal",
+                    singleClick: true,
+                    step: 1
+                });
+
+                
+
+                
+                
+                
+
+                
+
+            })
+
+            /*
+             * Show and hide CPP categories according to user preferences, and display Social History, Medical History, Ongoing Concerns, and Reminders at user-specified positions
+             */
+            function getPreferenceBasedEChart() {
+                const isCppPreferencesEnabled = '';
+                if (isCppPreferencesEnabled !== 'on') {
+                    showIssueNotes();
+                    return;
+                }
+
+                const socialHxPosition = 'R1I1';
+                const medicalHxPosition = 'R1I2';
+                const ongoingConcernsPosition = 'R2I1';
+                const remindersPosition = 'R2I2';
+                showCustomIssueNotes(socialHxPosition, medicalHxPosition, ongoingConcernsPosition, remindersPosition);
+
+                const preventionsDisplay = 'SHOW';
+                const dxRegistryDisplay = 'SHOW';
+                const formsDisplay = 'SHOW';
+                const eformsDisplay = 'SHOW';
+                const documentsDisplay = 'SHOW';
+                const labsDisplay = 'SHOW';
+                const measurementsDisplay = 'SHOW';
+                const consultationsDisplay = 'SHOW';
+                const hrmDisplay = 'SHOW';
+
+                const allergiesDisplay = 'SHOW';
+                const medicationsDisplay = 'SHOW';
+                const otherMedsDisplay = 'SHOW';
+                const riskFactorsDisplay = 'SHOW';
+                const familyHxDisplay = 'SHOW';
+                const unresolvedIssuesDisplay = 'SHOW';
+                const resolvedIssuesDisplay = 'SHOW';
+                const episodesDisplay = 'SHOW';
+
+                // If any display variable is empty, it means that the corresponding cpp is hidden
+                if (!preventionsDisplay) {
+                    hideCpp('preventions');
+                }
+                if (!dxRegistryDisplay) {
+                    hideCpp('Dx');
+                }
+                if (!formsDisplay) {
+                    hideCpp('forms');
+                }
+                if (!eformsDisplay) {
+                    hideCpp('eforms');
+                }
+                if (!documentsDisplay) {
+                    hideCpp('docs');
+                }
+                if (!labsDisplay) {
+                    hideCpp('labs');
+                }
+                if (!measurementsDisplay) {
+                    hideCpp('measurements');
+                }
+                if (!consultationsDisplay) {
+                    hideCpp('consultation');
+                }
+                if (!hrmDisplay) {
+                    hideCpp('HRM');
+                }
+
+                if (!allergiesDisplay) {
+                    hideCpp('allergies');
+                }
+                if (!medicationsDisplay) {
+                    hideCpp('Rx');
+                }
+                if (!otherMedsDisplay) {
+                    hideCpp('OMeds');
+                }
+                if (!riskFactorsDisplay) {
+                    hideCpp('RiskFactors');
+                }
+                if (!familyHxDisplay) {
+                    hideCpp('FamHistory');
+                }
+                if (!unresolvedIssuesDisplay) {
+                    hideCpp('unresolvedIssues');
+                }
+                if (!resolvedIssuesDisplay) {
+                    hideCpp('resolvedIssues');
+                }
+                if (!episodesDisplay) {
+                    hideCpp('episode');
+                }
+            }
+
+            function doscroll() {
+                let bodyScroll = document.body.scrollHeight + 99999;
+                window.scrollTo(0, bodyScroll);
+            }
+
+            window.onbeforeunload = onClosing;
+
+
+        </script>
+    </head>
+    <body id="body">
+    
+<style>
+    .oscar-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 1234;
+        display: none;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    }
+
+    #img-oscar-spinner {
+        width: 100px;
+        height: 77px;
+    }
+
+    .oscar-spinner-screen {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 101;
+        display: none;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    }
+
+    .active-oscar-spinner {
+        display: block;
+    }
+</style>
+
+<script type="text/javascript">
+
+    // if locked is true: can't click away
+    // if locked is false: can click away from it
+    function ShowSpin(locked) {
+        let screen = document.getElementById("oscar-spinner-screen");
+        let spinner = document.getElementById("oscar-spinner");
+
+        screen.classList.add("active-oscar-spinner");
+        spinner.classList.add("active-oscar-spinner");
+
+        if (locked) {
+            screen.removeEventListener("click", HideSpin);
+        } else {
+            screen.addEventListener("click", HideSpin);
+        }
+        return true;
+    }
+
+    function HideSpin() {
+        let screen = document.getElementById("oscar-spinner-screen");
+        let spinner = document.getElementById("oscar-spinner");
+
+        screen.classList.remove("active-oscar-spinner");
+        spinner.style.opacity = "0";
+
+        setTimeout(function () {
+            spinner.classList.remove("active-oscar-spinner");
+            spinner.style.opacity = "1";
+        }, 300);
+    }
+</script>
+<div id="oscar-spinner-screen" class="oscar-spinner-screen"></div>
+<div id="oscar-spinner" class="oscar-spinner">
+    <img id="img-oscar-spinner" src="page_files/spinner.jpg" alt="Loading">
+</div>
+    <div id="header">
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="header-top-row">
+    <div id="left-column">
+        <div id="branding-logo">
+            <img alt="OSCAR EMR" src="page_files/oscar_logo_small.png" width="19px">
+        </div>
+        <div id="patient-label"><div id="patient-full-name"><h1><a href="http://localhost:8080/oscar/demographic/demographiccontrol.jsp?demographic_no=3001&amp;displaymode=edit&amp;dboperation=search_detail" target="_blank">TU, RYAN</a></h1></div><div id="patient-sex"><div class="label">sex</div>O</div><div id="patient-dob"><div class="label">dob</div>2000-01-01</div><div id="patient-age"><div class="label">age</div>26 years</div><div id="patient-mrp"><div class="label">MRP</div>openodoc, doctor</div><div id="patient-phone" title=""><div class="label">phone</div>416-123-1234</div><div id="patient-next-appointment"><div class="label"><a href="http://localhost:8080/oscar/demographic/demographiccontrol.jsp?demographic_no=3001&amp;last_name=TU&amp;first_name=RYAN&amp;orderby=appointment_date&amp;displaymode=appt_history&amp;dboperation=appt_history&amp;limit1=0&amp;limit2=25" title="View Appointment History" target="_blank">Next Appt.</a></div>Unknown</div></div>
+    </div>
+    <div id="right-column">
+        <div id="userSettings" style="align-self: center; margin-right:15px;">
+            <ul id="userSettingsMenu" style="display: flex; gap:5px;">
+                <li>
+                    <a title="Scratch Pad" href="javascript:void(0)" onclick="window.open('/oscar/scratch/index.jsp','scratch','height=700px, width=1024px')">
+                        <div class="glyphicon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-card-list" viewBox="0 0 16 16">
+                                <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2z"></path>
+                                <path d="M5 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 5 8m0-2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0 5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m-1-5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0M4 8a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m0 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"></path>
+                            </svg>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" style="display: flex; align-items: flex-end;" onclick="window.open('/oscar/provider/providerpreference.jsp?provider_no=999998', 'height=680px,width=715px')" title="Edit your personal setting">
+                        <div class="glyphicon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16">
+                                <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            doctor openodoc
+                        </div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div id="header-bottom-row">
+    
+
+    <div>
+        
+    </div>
+
+    
+</div>
+
+
+
+    </div>
+
+    <div id="navigation-layout">
+        <div id="rightNavBar">
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <script type="text/javascript" src="page_files/profilePicture.js"></script>
+
+
+    <!-- Sets the profile picture of a loaded case -->
+    <!-- "roleName$" is the correct name for this role, see other jsp pages for confirmation -->
+    
+        
+            
+            
+                <img style="cursor: pointer;" src="page_files/defaultR_img.jpg" alt="No_Id_Photo" height="100" title="Click to upload a new photo." onmouseover="window.status='Click to upload a new photo.'; return true;" onclick="popupUploadPage('/oscar/casemgmt/uploadimage.jsp', 3001); return false;">
+            
+        
+    
+
+    
+
+
+
+        <div class="leftBox" id="allergies">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayAllergy.do?hC=C85A17">
+
+<div class="nav-menu-heading" style="background-color: #C85A17;">
+    <div class="nav-menu-add-button" id="menuTitleallergies">
+        <h3><a href="javascript:void(0);" onclick="popupPage(580,900,'Allergy3001','/oscar/oscarRx/showAllergy.do?demographicNo=3001'); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(580,900,'Allergy3001','/oscar/oscarRx/showAllergy.do?demographicNo=3001'); return false;"><a href="javascript:void(0)">Allergies
+        </a></h3>
+    </div>
+</div>
+<ul id="allergieslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="allergiesnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="Rx">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayRx.do?hC=7D2252&amp;numToDisplay=12">
+
+<div class="nav-menu-heading" style="background-color: #7D2252;">
+    <div class="nav-menu-add-button" id="menuTitleRx">
+        <h3><a href="javascript:void(0);" onclick="popupPage(900,1080,'Rx3001','/oscar/oscarRx/choosePatient.do?providerNo=999998&amp;demographicNo=3001'); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(900,1080,'Rx3001','/oscar/oscarRx/choosePatient.do?providerNo=999998&amp;demographicNo=3001'); return false;"><a href="javascript:void(0)">Medications
+        </a></h3>
+    </div>
+</div>
+<ul id="Rxlist">
+    <li style="overflow: hidden; clear:both; position:relative; display:block; white-space:nowrap; background-color: #f3f3f3;">
+<a border="0" style="text-decoration:none; width:7px; z-index: 100; background-color: #f3f3f3; position:relative; margin: 0px; padding-bottom: 0px;  vertical-align: bottom; display: inline; float: right; clear:both;"><img id="imgRx0" src="page_files/clear.gif">&nbsp;&nbsp;</a>
+<span style=" z-index: 1; position:absolute; margin-right:10px; width:90%; overflow:hidden;  height:1.2em; white-space:nowrap; float:left; text-align:left; ">
+<a class="links" style="" onmouseover="this.className='linkhover'" onmouseout="this.className='links'" href="#" onclick="return false;" title="compound v  take once per day  Qty:1 Repeats:30 2026-03-25 - 2026-03-25">
+<span class="currentDrug longTermMed ">compound v  take once per day  Qty:1 Repeats:30</span>
+</a>
+</span>
+</li>
+
+</ul>
+<input type="hidden" id="Rxnum" value="1">
+
+
+
+
+</div><div class="leftBox" id="OMeds">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="nav-menu-heading" style="background-color:#306754">
+<div class="nav-menu-add-button">
+<h3>
+
+<a href="javascript:void(0)" title="Add Item" onclick="return showEdit(event,'Other Meds','',0,'','','','/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=0&amp;noteId=0', 'OMeds','hc=306754&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=OMeds&amp;title=oscarEncounter.oMeds.title&amp;cmd=OMeds&amp;appointment_no=0','65;OMeds;Other Meds as part of cpp','','3001');">+</a>
+
+</h3>
+</div>
+<div class="nav-menu-title">
+<h3>
+	<a href="javascript:void(0)" onclick="return showIssueHistory('3001','65');">Other Meds</a>
+</h3>
+</div>
+</div>
+        
+            
+                <div style="clear:both;" class="topBox-notes">
+            
+            
+        
+
+<ul>
+
+
+    
+    
+
+
+
+
+
+<ul>
+  
+</ul>
+
+
+<input type="hidden" id="OMedsnum" value="0">
+<input type="hidden" id="OMedsthreshold" value="0">
+
+
+</ul></div></div><div class="leftBox" id="RiskFactors">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="nav-menu-heading" style="background-color:#993333">
+<div class="nav-menu-add-button">
+<h3>
+
+<a href="javascript:void(0)" title="Add Item" onclick="return showEdit(event,'Risk Factors','',0,'','','','/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=0&amp;noteId=0', 'RiskFactors','hc=993333&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=RiskFactors&amp;title=oscarEncounter.riskFactors.title&amp;cmd=RiskFactors&amp;appointment_no=0','71;RiskFactors;Risk Factors as part of cpp','','3001');">+</a>
+
+</h3>
+</div>
+<div class="nav-menu-title">
+<h3>
+	<a href="javascript:void(0)" onclick="return showIssueHistory('3001','71');">Risk Factors</a>
+</h3>
+</div>
+</div>
+        
+            
+                <div style="clear:both;" class="topBox-notes">
+            
+            
+        
+
+<ul>
+
+
+    
+    
+
+
+
+
+
+<ul>
+  
+</ul>
+
+
+<input type="hidden" id="RiskFactorsnum" value="0">
+<input type="hidden" id="RiskFactorsthreshold" value="0">
+
+
+</ul></div></div><div class="leftBox" id="FamHistory">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="nav-menu-heading" style="background-color:#006600">
+<div class="nav-menu-add-button">
+<h3>
+
+<a href="javascript:void(0)" title="Add Item" onclick="return showEdit(event,'Family History','',0,'','','','/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=0&amp;noteId=0', 'FamHistory','hc=006600&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=FamHistory&amp;title=oscarEncounter.famHistory.title&amp;cmd=FamHistory&amp;appointment_no=0','70;FamHistory;Family History as part of cpp','','3001');">+</a>
+
+</h3>
+</div>
+<div class="nav-menu-title">
+<h3>
+	<a href="javascript:void(0)" onclick="return showIssueHistory('3001','70');">Family History</a>
+</h3>
+</div>
+</div>
+        
+            
+                <div style="clear:both;" class="topBox-notes">
+            
+            
+        
+
+<ul>
+
+
+    
+    
+
+
+
+
+
+<ul>
+  
+</ul>
+
+
+<input type="hidden" id="FamHistorynum" value="0">
+<input type="hidden" id="FamHistorythreshold" value="0">
+
+
+</ul></div></div><div class="leftBox" id="unresolvedIssues">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayIssues.do?hC=CC9900">
+
+<div class="nav-menu-heading" style="background-color: #CC9900;">
+    <div class="nav-menu-add-button" id="menuTitleunresolvedIssues">
+        <h3><a href="javascript:void(0);" onclick="return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="$('check_issue').value='';document.caseManagementViewForm.submit();; return false;"><a href="javascript:void(0)">Unresolved Issues
+        </a></h3>
+    </div>
+</div>
+<ul id="unresolvedIssueslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="unresolvedIssuesnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="resolvedIssues">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayResolvedIssues.do?hC=151B8D">
+
+<div class="nav-menu-heading" style="background-color: #151B8D;">
+    <div class="nav-menu-add-button" id="menuTitleresolvedIssues">
+        <h3><a href="javascript:void(0);" onclick="return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="$('check_issue').value='';document.caseManagementViewForm.submit();; return false;"><a href="javascript:void(0)">Resolved Issues
+        </a></h3>
+    </div>
+</div>
+<ul id="resolvedIssueslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="resolvedIssuesnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="Guidelines">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayDecisionSupportAlerts.do?hC=045228&amp;providerNo=999998&amp;demographicNo=3001">
+
+<div class="nav-menu-heading" style="background-color: #045228;">
+    <div class="nav-menu-add-button" id="menuTitleGuidelines">
+        <h3><a href="javascript:void(0);" onclick="popupPage(500,950,'dsalert3001','/oscar/oscarEncounter/decisionSupport/guidelineAction.do?method=list&amp;provider_no=999998&amp;demographic_no=3001&amp;parentAjaxId=Guidelines'); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(500,950,'dsalert3001','/oscar/oscarEncounter/decisionSupport/guidelineAction.do?method=list&amp;provider_no=999998&amp;demographic_no=3001&amp;parentAjaxId=Guidelines'); return false;; return false;"><a href="javascript:void(0)">Decision Support Alerts
+        </a></h3>
+    </div>
+</div>
+<ul id="Guidelineslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="Guidelinesnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="episode">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayEpisodes.do?hC=045228">
+
+<div class="nav-menu-heading" style="background-color: #045228;">
+    <div class="nav-menu-add-button" id="menuTitleepisode">
+        <h3><a href="javascript:void(0);" onclick="popupPage(500,600,'AddEpisode3001','/oscar/Episode.do?method=edit&amp;demographicNo=3001'); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(500,900,'episode3001','/oscar/Episode.do?method=list&amp;demographicNo=3001'); return false;"><a href="javascript:void(0)">Episodes
+        </a></h3>
+    </div>
+</div>
+<ul id="episodelist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="episodenum" value="0">
+
+
+
+
+</div><div class="leftBox" id="pregnancy"></div><div class="leftBox" id="contacts">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayContacts.do?hC=045228">
+
+<div class="nav-menu-heading" style="background-color: #045228;">
+    <div class="nav-menu-add-button" id="menuTitlecontacts">
+        <h3><a href="javascript:void(0);" onclick="popupPage(500,700,'AddContact3001','/oscar/demographic/manageHealthCareTeam.jsp?view=detached&amp;demographicNo=3001'); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(400,650,'contact3001','/oscar/demographic/displayHealthCareTeam.jsp?view=detached&amp;demographicNo=3001'); return false;"><a href="javascript:void(0)">Health Care Team
+        </a></h3>
+    </div>
+</div>
+<ul id="contactslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="contactsnum" value="0">
+
+
+
+
+</div></div>
+
+        <div id="leftNavBar">
+            
+
+
+
+
+
+
+<script type="text/javascript">
+    //This object stores the key -> cmd value passed to action class and the id of the created div
+    // and the value -> URL of the action class
+    
+</script>
+
+<!--dummmy div to force browser to allocate space -->
+
+
+<form style="display: none;" name="dummyForm" action="">
+    <input type="hidden" id="reloadDiv" name="reloadDiv" value="none" onchange="updateDiv();">
+</form>
+
+        <div class="leftBox" id="preventions">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayPrevention.do?hC=009999">
+
+<div class="nav-menu-heading" style="background-color: #009999;">
+    <div class="nav-menu-add-button" id="menuTitlepreventions">
+        <h3><a href="javascript:void(0);" onclick="popupPage(700,960,'prevention3001', '/oscar/oscarPrevention/index.jsp?demographic_no=3001');return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(700,960,'prevention3001', '/oscar/oscarPrevention/index.jsp?demographic_no=3001'); return false;"><a href="javascript:void(0)">Preventions
+        </a></h3>
+    </div>
+</div>
+<ul id="preventionslist">
+    <li style="overflow: hidden; clear:both; position:relative; display:block; white-space:nowrap; background-color: #f3f3f3;">
+<a border="0" style="text-decoration:none; width:7px; z-index: 100; background-color: #f3f3f3; position:relative; margin: 0px; padding-bottom: 0px;  vertical-align: bottom; display: inline; float: right; clear:both;"><img id="imgpreventions0" src="page_files/clear.gif">&nbsp;&nbsp;</a>
+<span style=" z-index: 1; position:absolute; margin-right:10px; width:90%; overflow:hidden;  height:1.2em; white-space:nowrap; float:left; text-align:left; ">
+<a class="links" style="" onmouseover="this.className='linkhover'" onmouseout="this.className='links'" href="#" onclick="reloadWindows['prevention3001'] = '/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;reloadURL=/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;numToDisplay=6&amp;cmd=preventions&amp;numToDisplay=6&amp;cmd=preventions';reloadWindows['prevention3001div'] = 'preventions';popupPage(700,960,'prevention3001', '/oscar/oscarPrevention/index.jsp?demographic_no=3001');return false;; return false;" title="Td=Tetanus and Diphtheria adult type formulation">
+Td
+</a>
+</span>
+</li>
+<li style="overflow: hidden; clear:both; position:relative; display:block; white-space:nowrap; ">
+<a border="0" style="text-decoration:none; width:7px; z-index: 100; background-color: white; position:relative; margin: 0px; padding-bottom: 0px;  vertical-align: bottom; display: inline; float: right; clear:both;"><img id="imgpreventions1" src="page_files/clear.gif">&nbsp;&nbsp;</a>
+<span style=" z-index: 1; position:absolute; margin-right:10px; width:90%; overflow:hidden;  height:1.2em; white-space:nowrap; float:left; text-align:left; ">
+<a class="links" style="" onmouseover="this.className='linkhover'" onmouseout="this.className='links'" href="#" onclick="reloadWindows['prevention3001'] = '/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;reloadURL=/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;numToDisplay=6&amp;cmd=preventions&amp;numToDisplay=6&amp;cmd=preventions';reloadWindows['prevention3001div'] = 'preventions';popupPage(700,960,'prevention3001', '/oscar/oscarPrevention/index.jsp?demographic_no=3001');return false;; return false;" title="Flu=Influenza vaccine">
+Flu
+</a>
+</span>
+</li>
+<li style="overflow: hidden; clear:both; position:relative; display:block; white-space:nowrap; background-color: #f3f3f3;">
+<a border="0" style="text-decoration:none; width:7px; z-index: 100; background-color: #f3f3f3; position:relative; margin: 0px; padding-bottom: 0px;  vertical-align: bottom; display: inline; float: right; clear:both;"><img id="imgpreventions2" src="page_files/clear.gif">&nbsp;&nbsp;</a>
+<span style=" z-index: 1; position:absolute; margin-right:10px; width:90%; overflow:hidden;  height:1.2em; white-space:nowrap; float:left; text-align:left; ">
+<a class="links" style="" onmouseover="this.className='linkhover'" onmouseout="this.className='links'" href="#" onclick="reloadWindows['prevention3001'] = '/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;reloadURL=/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;numToDisplay=6&amp;cmd=preventions&amp;numToDisplay=6&amp;cmd=preventions';reloadWindows['prevention3001div'] = 'preventions';popupPage(700,960,'prevention3001', '/oscar/oscarPrevention/index.jsp?demographic_no=3001');return false;; return false;" title="H1N1 Vaccination">
+H1N1
+</a>
+</span>
+</li>
+<li style="overflow: hidden; clear:both; position:relative; display:block; white-space:nowrap; ">
+<a border="0" style="text-decoration:none; width:7px; z-index: 100; background-color: white; position:relative; margin: 0px; padding-bottom: 0px;  vertical-align: bottom; display: inline; float: right; clear:both;"><img id="imgpreventions3" src="page_files/clear.gif">&nbsp;&nbsp;</a>
+<span style=" z-index: 1; position:absolute; margin-right:10px; width:90%; overflow:hidden;  height:1.2em; white-space:nowrap; float:left; text-align:left; ">
+<a class="links" style="" onmouseover="this.className='linkhover'" onmouseout="this.className='links'" href="#" onclick="reloadWindows['prevention3001'] = '/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;reloadURL=/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;numToDisplay=6&amp;cmd=preventions&amp;numToDisplay=6&amp;cmd=preventions';reloadWindows['prevention3001div'] = 'preventions';popupPage(700,960,'prevention3001', '/oscar/oscarPrevention/index.jsp?demographic_no=3001');return false;; return false;" title="HIV = all pregnant women, opt out routine screening of all adults">
+HIV
+</a>
+</span>
+</li>
+<li style="overflow: hidden; clear:both; position:relative; display:block; white-space:nowrap; background-color: #f3f3f3;">
+<a border="0" style="text-decoration:none; width:7px; z-index: 100; background-color: #f3f3f3; position:relative; margin: 0px; padding-bottom: 0px;  vertical-align: bottom; display: inline; float: right; clear:both;"><img id="imgpreventions4" src="page_files/clear.gif">&nbsp;&nbsp;</a>
+<span style=" z-index: 1; position:absolute; margin-right:10px; width:90%; overflow:hidden;  height:1.2em; white-space:nowrap; float:left; text-align:left; ">
+<a class="links" style="" onmouseover="this.className='linkhover'" onmouseout="this.className='links'" href="#" onclick="reloadWindows['prevention3001'] = '/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;reloadURL=/oscar/oscarEncounter/displayPrevention.do?hC=009999&amp;numToDisplay=6&amp;cmd=preventions&amp;numToDisplay=6&amp;cmd=preventions';reloadWindows['prevention3001div'] = 'preventions';popupPage(700,960,'prevention3001', '/oscar/oscarPrevention/index.jsp?demographic_no=3001');return false;; return false;" title="Smoking history">
+Smoking
+</a>
+</span>
+</li>
+
+</ul>
+<input type="hidden" id="preventionsnum" value="5">
+
+
+
+
+</div><div class="leftBox" id="tickler">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayTickler.do?hC=FF6600">
+
+<div class="nav-menu-heading" style="background-color: #FF6600;">
+    <div class="nav-menu-add-button" id="menuTitletickler">
+        <h3><a href="javascript:void(0);" onclick="popupPage(500,600,'AddTickler3001','/oscar/tickler/ticklerAdd.jsp?bFirstDisp=false&amp;demographic_no=3001&amp;parentAjaxId=tickler'); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(500,900,'ViewTickler3001','/oscar/tickler/ticklerMain.jsp?demoview=3001&amp;parentAjaxId=tickler'); return false;"><a href="javascript:void(0)">Tickler
+        </a></h3>
+    </div>
+</div>
+<ul id="ticklerlist">
+    <li style="overflow: hidden; clear:both; position:relative; display:block; white-space:nowrap; background-color: #f3f3f3;">
+<a border="0" style="text-decoration:none; width:7px; z-index: 100; background-color: #f3f3f3; position:relative; margin: 0px; padding-bottom: 0px;  vertical-align: bottom; display: inline; float: right; clear:both;"><img id="imgtickler0" src="page_files/clear.gif">&nbsp;&nbsp;</a>
+<span style=" z-index: 1; position:absolute; margin-right:10px; width:90%; overflow:hidden;  height:1.2em; white-space:nowrap; float:left; text-align:left; ">
+<a class="links" style="color: #FF0000;" onmouseover="this.className='linkhover'" onmouseout="this.className='links'" href="#" onclick="reloadWindows['597502780'] = '/oscar/oscarEncounter/displayTickler.do?hC=FF6600&amp;reloadURL=/oscar/oscarEncounter/displayTickler.do?hC=FF6600&amp;numToDisplay=6&amp;cmd=tickler&amp;numToDisplay=6&amp;cmd=tickler';reloadWindows['597502780div'] = 'tickler';popupPage(500,900,'597502780','/oscar/tickler/ticklerEdit.jsp?tickler_no=2&amp;parentAjaxId=tickler'); return false;" title="NORMAL: Advised RTC for immunization 2026-03-25">
+Advised RTC for immunization
+</a>
+</span>
+<span style="z-index: 100; background-color: #f3f3f3; overflow:hidden;   position:relative; height:1.2em; white-space:nowrap; float:right; text-align:right;">
+...<a class="links" style="color: #FF0000;" onmouseover="this.className='linkhover'" onmouseout="this.className='links'" href="#" onclick="reloadWindows['597502780'] = '/oscar/oscarEncounter/displayTickler.do?hC=FF6600&amp;reloadURL=/oscar/oscarEncounter/displayTickler.do?hC=FF6600&amp;numToDisplay=6&amp;cmd=tickler&amp;numToDisplay=6&amp;cmd=tickler';reloadWindows['597502780div'] = 'tickler';popupPage(500,900,'597502780','/oscar/tickler/ticklerEdit.jsp?tickler_no=2&amp;parentAjaxId=tickler'); return false;" title="NORMAL: Advised RTC for immunization 2026-03-25">
+25-Mar-2026
+</a>
+</span>
+</li>
+
+</ul>
+<input type="hidden" id="ticklernum" value="1">
+
+
+
+
+</div><div class="leftBox" id="Dx">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayDisease.do?hC=5A5A5A">
+
+<div class="nav-menu-heading" style="background-color: #5A5A5A;">
+    <div class="nav-menu-add-button" id="menuTitleDx">
+        <h3><a href="javascript:void(0);" onclick="popupPage(580,900,'Disease3001','/oscar/oscarResearch/dxresearch/setupDxResearch.do?demographicNo=3001&amp;providerNo=999998&amp;quickList='); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(580,900,'Disease3001','/oscar/oscarResearch/dxresearch/setupDxResearch.do?demographicNo=3001&amp;providerNo=999998&amp;quickList='); return false;"><a href="javascript:void(0)">Disease Registry
+        </a></h3>
+    </div>
+</div>
+<ul id="Dxlist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="Dxnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="forms">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayForms.do?hC=917611">
+
+<div class="nav-menu-heading" style="background-color: #917611;">
+    <div class="nav-menu-add-button" id="menuTitle1">
+        <h3><a href="javascript:void(0);" onmouseover="return !showMenu('1', event);">+</a></h3>
+    </div>
+    
+    <div id="menu1" class="menu" style="width: 250px;" onclick="event.cancelBubble = true;">
+        <h3 style="text-align: center">Add Form
+        </h3>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1938190543new', '../form/formar.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">AR
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'245533586new', '../form/formonar.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">AR2005
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'932687773new', '../form/formannual.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Annual
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1329798405new', '../form/formannualV2.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Annual V2
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1563418089new', '../form/formlabreq07.jsp?labType=AnteNatal&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Antenatal Lab Req
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'58005969new', '../form/formCESD.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">CESD
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1460716831new', '../form/formchf.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">CHF
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1562824718new', '../form/formcaregiver.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Caregiver
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1112060969new', '../form/formSF36caregiver.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Caregiver - SF36
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1381880750new', '../form/formcostquestionnaire.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Cost Questionnaire
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'326358415new', '../form/formlatelifeFDIdisability.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">FDI Disability
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1041287221new', '../form/formlatelifeFDIfunction.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">FDI Function
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1279216554new', '../form/formfalls.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Falls History
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1133346541new', '../form/formgripstrength.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Grip Strength
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'547939598new', '../form/formGrowth0_36.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Growth 0-36m
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'2024430316new', '../form/formGrowthChart.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Growth Charts
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'103819675new', '../form/formhomefalls.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">HOME FAST
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1098335372new', '../form/formbchp.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Health Passport
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'963716774new', '../form/formimmunallergy.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">ImmunAllergies
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'383494314new', '../form/formintakeinfo.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Intake Information
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'645513961new', '../form/formlabreq.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Lab Req
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1728110744new', '../form/formlabreq07.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Lab Req 2007
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1750275248new', '../form/formlabreq10.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Lab Req 2010
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1416574382new', '../form/formlabreq07.jsp?labType=AHEf&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 AHEf
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1423039029new', '../form/formlabreq07.jsp?labType=AHEm&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 AHEm
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'782241663new', '../form/formlabreq07.jsp?labType=Acne&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Acne
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'991180909new', '../form/formlabreq07.jsp?labType=Anemia&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Anemia
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1118794062new', '../form/formlabreq07.jsp?labType=AntiPsychotic&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 AntiPsychotic
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'876559884new', '../form/formlabreq07.jsp?labType=Bp&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Bp
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'150539944new', '../form/formlabreq07.jsp?labType=Chol&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Chol
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'801754683new', '../form/formlabreq07.jsp?labType=Ed&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Ed
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'618537437new', '../form/formlabreq07.jsp?labType=Fatigue&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Fatigue
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'973076534new', '../form/formlabreq07.jsp?labType=Fulstdf&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Fulstdf
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'979541181new', '../form/formlabreq07.jsp?labType=Fulstdm&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Fulstdm
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'669500638new', '../form/formlabreq07.jsp?labType=Gastro&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Gastro
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'604863577new', '../form/formlabreq07.jsp?labType=Gstdm&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Gstdm
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'699413583new', '../form/formlabreq07.jsp?labType=Gyne&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Gyne
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1457622101new', '../form/formlabreq07.jsp?labType=HIV&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 HIV
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'172392464new', '../form/formlabreq07.jsp?labType=Ibs&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Ibs
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'2004493303new', '../form/formlabreq07.jsp?labType=Mono&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Mono
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1182298542new', '../form/formlabreq07.jsp?labType=Pcod&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Pcod
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'613340045new', '../form/formlabreq07.jsp?labType=PreLithium&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 PreLithium
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'289617975new', '../form/formlabreq07.jsp?labType=Stdf&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Stdf
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'145247219new', '../form/formlabreq07.jsp?labType=Stdma&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Stdma
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'128623841new', '../form/formlabreq07.jsp?labType=Stdms&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Stdms
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'374102579new', '../form/formlabreq07.jsp?labType=Thyroid&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Thyroid
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'2110271248new', '../form/formlabreq07.jsp?labType=Urticaria&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Urticaria
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1556375744new', '../form/formlabreq07.jsp?labType=Uti&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Uti
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1729499628new', '../form/formlabreq07.jsp?labType=Vaginitis&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 Vaginitis
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1629879994new', '../form/formlabreq07.jsp?labType=eFTS&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq07 eFTS
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'995217558new', '../form/formlabreq10.jsp?labType=AHEf&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 AHEf
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1001682205new', '../form/formlabreq10.jsp?labType=AHEm&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 AHEm
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'360884839new', '../form/formlabreq10.jsp?labType=Acne&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Acne
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'2106804347new', '../form/formlabreq10.jsp?labType=Anemia&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Anemia
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1968661658new', '../form/formlabreq10.jsp?labType=AntiPsychotic&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 AntiPsychotic
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1998784804new', '../form/formlabreq10.jsp?labType=Bp&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Bp
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'270816880new', '../form/formlabreq10.jsp?labType=Chol&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Chol
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1923979603new', '../form/formlabreq10.jsp?labType=Ed&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Ed
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'2128167435new', '../form/formlabreq10.jsp?labType=Fatigue&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Fatigue
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1773628338new', '../form/formlabreq10.jsp?labType=Fulstdf&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Fulstdf
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1767163691new', '../form/formlabreq10.jsp?labType=Fulstdm&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Fulstdm
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'527481402new', '../form/formlabreq10.jsp?labType=Gastro&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Gastro
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'782023233new', '../form/formlabreq10.jsp?labType=Gstdm&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Gstdm
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'278056759new', '../form/formlabreq10.jsp?labType=Gyne&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Gyne
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1886856253new', '../form/formlabreq10.jsp?labType=HIV&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 HIV
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'256841688new', '../form/formlabreq10.jsp?labType=Ibs&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Ibs
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1869117169new', '../form/formlabreq10.jsp?labType=Mono&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Mono
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'760941718new', '../form/formlabreq10.jsp?labType=Pcod&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Pcod
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'18741595new', '../form/formlabreq10.jsp?labType=PreLithium&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 PreLithium
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'710974799new', '../form/formlabreq10.jsp?labType=Stdf&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Stdf
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'322406875new', '../form/formlabreq10.jsp?labType=Stdma&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Stdma
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'305783497new', '../form/formlabreq10.jsp?labType=Stdms&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Stdms
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1922365003new', '../form/formlabreq10.jsp?labType=Thyroid&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Thyroid
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'288766200new', '../form/formlabreq10.jsp?labType=Urticaria&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Urticaria
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1985609896new', '../form/formlabreq10.jsp?labType=Uti&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Uti
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'743962620new', '../form/formlabreq10.jsp?labType=Vaginitis&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 Vaginitis
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'2051236818new', '../form/formlabreq10.jsp?labType=eFTS&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">LabReq10 eFTS
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1082863940new', '../form/formConsultant.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Letterhead
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1182741488new', '../form/formmmse.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">MMSE
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'511123441new', '../form/formmentalhealth.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Mental Health
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'792299230new', '../form/formMentalHealthForm1.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Mental Health Form1
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1207514734new', '../form/formMentalHealthForm14.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Mental Health Form14
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1123474323new', '../form/formMentalHealthForm42.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Mental Health Form42
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1412780798new', '../form/formonarenhanced.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">ON AR Enhanced
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'137934731new', '../form/formovulation.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Ovulation
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1971106194new', '../form/formpalliativecare.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Pall. Care
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1624282524new', '../form/patientEncounterWorksheet.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Patient Encounter Worksheet
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1818885405new', '../form/formperimenopausal.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">PeriMenopausal
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'704948103new', '../form/formPositionHazard.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Position Hazard
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'619808849new', '../form/formselfadministered.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Risk Assessment
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1306524594new', '../form/formrourke.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Rourke
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1179384714new', '../form/formrourke2006.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Rourke2006
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1149832042new', '../form/formrourke2017complete.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Rourke2017
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1127667538new', '../form/formrourke2020complete.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Rourke2020
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'2131609108new', '../form/formSF36.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">SF36
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1330018794new', '../form/formselfefficacy.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Self Efficacy
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'197825333new', '../form/formselfmanagement.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Self Management
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'242342819new', '../form/formIntakeHx.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Student Intake Hx
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'934247649new', '../form/formtype2diabete.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">T2Diabetes
+        </a>
+        
+        <a href="javascript:void(0)" class="menuItemright" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'1225883295new', '../form/formtreatmentpref.jsp?demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Treatment Preference
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,960,'877872775new', '../form/SetupForm.do?formName=VTForm&amp;demographic_no=3001&amp;formId=0&amp;provNo=999998&amp;parentAjaxId=forms&amp;appointmentNo='); return false;">Vascular Tracker
+        </a>
+        
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(600, 700, 'Forms3001', '/oscar/oscarEncounter/formlist.jsp?demographic_no=3001'); return false;"><a href="javascript:void(0)">Forms
+        </a></h3>
+    </div>
+</div>
+<ul id="formslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="formsnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="eforms">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayEForms.do?hC=008000">
+
+<div class="nav-menu-heading" style="background-color: #008000;">
+    <div class="nav-menu-add-button" id="menuTitleeforms">
+        <h3><a href="javascript:void(0);" onclick="popupPage(500,950,'AddeForm3001','/oscar/eform/efmformslistadd.jsp?demographic_no=3001&amp;appointment=&amp;parentAjaxId=eforms'); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(500,950,'eForm3001', '/oscar/eform/efmpatientformlist.jsp?demographic_no=3001&amp;apptProvider=999998&amp;appointment=&amp;parentAjaxId=eforms'); return false;"><a href="javascript:void(0)">eForms
+        </a></h3>
+    </div>
+</div>
+<ul id="eformslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="eformsnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="docs">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayDocuments.do?hC=476BB3">
+
+<div class="nav-menu-heading" style="background-color: #476BB3;">
+    <div class="nav-menu-add-button" id="menuTitledocs">
+        <h3><a href="javascript:void(0);" onclick="popupPage(500,1115,'addDoc3001','/oscar/documentManager/documentReport.jsp?function=demographic&amp;doctype=lab&amp;functionid=3001&amp;curUser=999998&amp;mode=add&amp;parentAjaxId=docs');return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(500,1115,'docs3001', '/oscar/documentManager/documentReport.jsp?function=demographic&amp;doctype=lab&amp;functionid=3001&amp;curUser=999998'); return false;"><a href="javascript:void(0)">Documents
+        </a></h3>
+    </div>
+</div>
+<ul id="docslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="docsnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="labs">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayLabs.do?hC=A0509C">
+
+<div class="nav-menu-heading" style="background-color: #A0509C;">
+    <div class="nav-menu-add-button" id="menuTitle2">
+        <h3><a href="javascript:void(0);" onmouseover="return !showMenu('2', event);">+</a></h3>
+    </div>
+    
+    <div id="menu2" class="menu" style="width: 125px;" onclick="event.cancelBubble = true;">
+        <h3 style="text-align: center">Lab Displays
+        </h3>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,1000, 'AllLabs3001','/oscar/lab/CumulativeLabValues3.jsp?demographic_no=3001'); return false;">Grid Display
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,1000, 'AllLabs3001','/oscar/lab/CumulativeLabValues2.jsp?demographic_no=3001'); return false;">Grid Display-OLD
+        </a>
+         <br>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(700,1000, 'AllLabs3001','/oscar/lab/CumulativeLabValues.jsp?demographic_no=3001'); return false;">Row Display
+        </a>
+         <br>
+        
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(700,599,'Labs3001','/oscar/lab/DemographicLab.jsp?demographicNo=3001'); return false;; return false;"><a href="javascript:void(0)">Lab Result
+        </a></h3>
+    </div>
+</div>
+<ul id="labslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="labsnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="msgs">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayMessages.do?hC=7F462C">
+
+<div class="nav-menu-heading" style="background-color: #7F462C;">
+    <div class="nav-menu-add-button" id="menuTitlemsgs">
+        <h3><a href="javascript:void(0);" onclick="popupPage(700,960,'SendMsg3001','/oscar/messenger/SendDemoMessage.do?demographic_no=3001'); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(600,900,'ViewMsg3001','/oscar/messenger/DisplayDemographicMessages.do?orderby=date&amp;boxType=3&amp;demographic_no=3001&amp;providerNo=999998&amp;userName=doctor openodoc'); return false;"><a href="javascript:void(0)">Messenger
+        </a></h3>
+    </div>
+</div>
+<ul id="msgslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="msgsnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="measurements">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayMeasurements.do?hC=344887">
+
+<div class="nav-menu-heading" style="background-color: #344887;">
+    <div class="nav-menu-add-button" id="menuTitle3">
+        <h3><a href="javascript:void(0);" onmouseover="return !showMenu('3', event);">+</a></h3>
+    </div>
+    
+    <div id="menu3" class="menu" style="width: 125px;" onclick="event.cancelBubble = true;">
+        <h3 style="text-align: center">Input Groups
+        </h3>
+        
+        <a href="javascript:void(0)" class="menuItemleft" onmouseover='this.style.color="black"' onmouseout='this.style.color="white"' onclick="popupPage(500,1000,'1083180848','/oscar/oscarEncounter/oscarMeasurements/SetupMeasurements.do?demographicNo=3001&amp;groupName=Test');measurementLoaded('1083180848'); return false;">Test
+        </a>
+         <br>
+        
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(600,1000,'measurements3001','/oscar/oscarEncounter/oscarMeasurements/SetupHistoryIndex.do'); return false;"><a href="javascript:void(0)">Measurements
+        </a></h3>
+    </div>
+</div>
+<ul id="measurementslist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="measurementsnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="consultation">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayConsultation.do?hC=6C2DC7">
+
+<div class="nav-menu-heading" style="background-color: #6C2DC7;">
+    <div class="nav-menu-add-button" id="menuTitleconsultation">
+        <h3><a href="javascript:void(0);" onclick="popupPage(700,960,'newConsult3001','/oscar/oscarEncounter/oscarConsultationRequest/ConsultationFormRequest.jsp?de=3001&amp;teamVar=&amp;appNo='); return false;">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(700,960,'Consultation3001','/oscar/oscarEncounter/oscarConsultationRequest/DisplayDemographicConsultationRequests.jsp?de=3001'); return false;"><a href="javascript:void(0)">Consultations
+        </a></h3>
+    </div>
+</div>
+<ul id="consultationlist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="consultationnum" value="0">
+
+
+
+
+</div><div class="leftBox" id="HRM">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<input type="hidden" name="reloadUrl" value="http://localhost:8080/oscar/oscarEncounter/displayHRM.do?hC=6699CC">
+
+<div class="nav-menu-heading" style="background-color: #6699CC;">
+    <div class="nav-menu-add-button" id="menuTitleHRM">
+        <h3><a href="javascript:void(0);" onclick="">+</a></h3>
+    </div>
+    
+    <div class="nav-menu-title">
+        <h3 onclick="popupPage(500,1115,'docs3001', '/oscar/hospitalReportManager/displayHRMDocList.jsp?demographic_no=3001'); return false;"><a href="javascript:void(0)">HRM Documents
+        </a></h3>
+    </div>
+</div>
+<ul id="HRMlist">
+    <li>&nbsp;</li>
+
+</ul>
+<input type="hidden" id="HRMnum" value="0">
+
+
+
+
+</div></div>
+
+        <div id="content">
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="cppBoxes">
+    <div id="divR1">
+        <!-- social history -->
+        <div id="divR1I1" class="topBox">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="nav-menu-heading" style="background-color:#996633">
+<div class="nav-menu-add-button">
+<h3>
+
+<a href="javascript:void(0)" title="Add Item" onclick="return showEdit(event,'Social History','',0,'','','','/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=null&amp;noteId=0', 'divR1I1','hc=996633&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=SocHistory&amp;title=oscarEncounter.socHistory.title&amp;cmd=divR1I1','66;SocHistory;Social History as part of cpp','','3001');">+</a>
+
+</h3>
+</div>
+<div class="nav-menu-title">
+<h3>
+	<a href="javascript:void(0)" onclick="return showIssueHistory('3001','66');">Social History</a>
+</h3>
+</div>
+</div>
+        
+            
+            
+                <div style="clear:both;" class="topBox-notes">
+            
+        
+
+<ul>
+
+
+    
+    
+
+
+
+
+
+<ul>
+  
+</ul>
+
+
+<input type="hidden" id="divR1I1num" value="0">
+<input type="hidden" id="divR1I1threshold" value="0">
+
+
+</ul></div></div>
+
+        <div id="divR1I2" class="topBox">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="nav-menu-heading" style="background-color:#996633">
+<div class="nav-menu-add-button">
+<h3>
+
+<a href="javascript:void(0)" title="Add Item" onclick="return showEdit(event,'Medical History','',0,'','','','/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=null&amp;noteId=0', 'divR1I2','hc=996633&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=MedHistory&amp;title=oscarEncounter.medHistory.title&amp;cmd=divR1I2','67;MedHistory;Medical History as part of cpp','','3001');">+</a>
+
+</h3>
+</div>
+<div class="nav-menu-title">
+<h3>
+	<a href="javascript:void(0)" onclick="return showIssueHistory('3001','67');">Medical History</a>
+</h3>
+</div>
+</div>
+        
+            
+            
+                <div style="clear:both;" class="topBox-notes">
+            
+        
+
+<ul>
+
+    <input type="hidden" id="divR1I2598" value="0">
+
+    
+        <li class="cpp" style="background-color: #F3F3F3;">
+    
+
+
+    <span id="spanListNote598">
+        
+            
+            
+                <a class="topLinks" onmouseover="this.className='topLinkhover'" onmouseout="this.className='topLinks'" title="Rev:2 - Last update:2026-04-09 07:12:24.0" id="listNote598" href="javascript:void(0)" onclick="showEdit(event,'Medical History','598','openodoc, doctor;','2026-04-09 06:35:48.0','2','had chicken pox', '/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=null&amp;noteId=598', 'divR1I2','hc=996633&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=MedHistory&amp;title=oscarEncounter.medHistory.title&amp;cmd=divR1I2','67;MedHistory;Medical History as part of cpp','','3001');return false;">
+            
+        
+
+        had chicken pox</a>
+    </span></li>
+
+
+    
+    
+
+
+
+
+
+<ul>
+  
+</ul>
+
+
+<input type="hidden" id="divR1I2num" value="1">
+<input type="hidden" id="divR1I2threshold" value="0">
+
+
+</ul></div></div>
+    </div>
+
+    <div id="divR2">
+        <!--Ongoing Concerns cell -->
+        <div id="divR2I1" class="topBox">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="nav-menu-heading" style="background-color:#996633">
+<div class="nav-menu-add-button">
+<h3>
+
+<a href="javascript:void(0)" title="Add Item" onclick="return showEdit(event,'Ongoing Concerns','',0,'','','','/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=null&amp;noteId=0', 'divR2I1','hc=996633&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=Concerns&amp;title=oscarEncounter.onGoing.title&amp;cmd=divR2I1','68;Concerns;Ongoing Concerns as part of cpp','','3001');">+</a>
+
+</h3>
+</div>
+<div class="nav-menu-title">
+<h3>
+	<a href="javascript:void(0)" onclick="return showIssueHistory('3001','68');">Ongoing Concerns</a>
+</h3>
+</div>
+</div>
+        
+            
+            
+                <div style="clear:both;" class="topBox-notes">
+            
+        
+
+<ul>
+
+
+    
+    
+
+
+
+
+
+<ul>
+  
+</ul>
+
+
+<input type="hidden" id="divR2I1num" value="0">
+<input type="hidden" id="divR2I1threshold" value="0">
+
+
+</ul></div></div>
+        <!--Reminders cell -->
+        <div id="divR2I2" class="topBox">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="nav-menu-heading" style="background-color:#996633">
+<div class="nav-menu-add-button">
+<h3>
+
+<a href="javascript:void(0)" title="Add Item" onclick="return showEdit(event,'Reminders','',0,'','','','/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=null&amp;noteId=0', 'divR2I2','hc=996633&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=Reminders&amp;title=oscarEncounter.reminders.title&amp;cmd=divR2I2','69;Reminders;Reminders as part of cpp','','3001');">+</a>
+
+</h3>
+</div>
+<div class="nav-menu-title">
+<h3>
+	<a href="javascript:void(0)" onclick="return showIssueHistory('3001','69');">Reminders</a>
+</h3>
+</div>
+</div>
+        
+            
+            
+                <div style="clear:both;" class="topBox-notes">
+            
+        
+
+<ul>
+
+
+    
+    
+
+
+
+
+
+<ul>
+  
+</ul>
+
+
+<input type="hidden" id="divR2I2num" value="0">
+<input type="hidden" id="divR2I2threshold" value="0">
+
+
+</ul></div></div>
+    </div>
+
+</div>
+
+<div id="notCPP">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" type="text/css" href="page_files/jquery-ui-1.12.1.min.css">
+
+
+
+
+<div id="topContent">
+    <form name="caseManagementViewForm" action="/oscar/CaseManagementView.do" method="post">
+        <input type="hidden" name="demographicNo" value="3001">
+        <input type="hidden" name="providerNo" value="999998">
+        <input type="hidden" name="tab" value="Current Issues">
+        <input type="hidden" name="hideActiveIssue" id="hideActiveIssue">
+        <input type="hidden" name="ectWin.rowOneSize" id="rowOneSize">
+        <input type="hidden" name="ectWin.rowTwoSize" id="rowTwoSize">
+        <input type="hidden" name="chain" value="list">
+        <input type="hidden" name="method" value="view">
+        <input type="hidden" id="check_issue" name="check_issue">
+        <input type="hidden" id="serverDate" value="Apr 09, 2026">
+        <input type="hidden" id="resetFilter" name="resetFilter" value="false">
+
+        <div id="filteredresults">
+            
+        
+            
+        
+            
+        
+            
+        </div>        
+        <div id="filter" style="display:none;margin-top: 5px; margin-left: 5px;margin-right: 5px;">
+            <input type="button" value="Hide" onclick="return filter(false);">
+            <input type="button" value="Reset Filter" onclick="return filter(true);">
+
+            <table style="border-collapse:collapse;width:100%;">
+                <tbody><tr>
+                    <th>
+                        Providers
+                    </th>
+                    <th>
+                        Role
+                    </th>
+                    <th>
+                        Sort
+                    </th>
+                    <th>
+                        Issues
+                    </th>
+                </tr>
+                <tr>
+                    <td style="border-left:solid #ddddff 3px">
+                        <div style="height:150px;overflow:auto">
+                            <ul style="padding:0;margin:0;list-style:none inside none">
+                                <li>
+                                    <input type="checkbox" name="filter_providers" value="a" onclick="filterCheckBox(this)">
+                                    All
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_providers" value="999998" onclick="filterCheckBox(this)">openodoc, doctor
+                                </li>
+                                
+                            </ul>
+                        </div>
+                    </td>
+                    <td style="border-left:solid #ddddff 3px">
+                        <div style="height:150px;overflow:auto">
+                            <ul style="padding:0;margin:0;list-style:none inside none">
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="a" onclick="filterCheckBox(this)">
+                                    All
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="3" onclick="filterCheckBox(this)">
+                                    admin
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="23" onclick="filterCheckBox(this)">
+                                    CAISI ADMIN
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="19" onclick="filterCheckBox(this)">
+                                    Case Manager
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="22" onclick="filterCheckBox(this)">
+                                    Client Service Worker
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="16" onclick="filterCheckBox(this)">
+                                    Clinical Assistant
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="14" onclick="filterCheckBox(this)">
+                                    Clinical Case Manager
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="13" onclick="filterCheckBox(this)">
+                                    Clinical Social Worker
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="27" onclick="filterCheckBox(this)">
+                                    Counselling Intern
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="18" onclick="filterCheckBox(this)">
+                                    counsellor
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="2" onclick="filterCheckBox(this)">
+                                    doctor
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="8" onclick="filterCheckBox(this)">
+                                    er_clerk
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="7" onclick="filterCheckBox(this)">
+                                    external
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="28" onclick="filterCheckBox(this)">
+                                    Field Note Admin
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="20" onclick="filterCheckBox(this)">
+                                    Housing Worker
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="31" onclick="filterCheckBox(this)">
+                                    HRMAdmin
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="4" onclick="filterCheckBox(this)">
+                                    locum
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="15" onclick="filterCheckBox(this)">
+                                    Medical Secretary
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="30" onclick="filterCheckBox(this)">
+                                    moderator
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="5" onclick="filterCheckBox(this)">
+                                    nurse
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="12" onclick="filterCheckBox(this)">
+                                    Nurse Manager
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="33" onclick="filterCheckBox(this)">
+                                    Partner Doctor
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="25" onclick="filterCheckBox(this)">
+                                    property staff
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="9" onclick="filterCheckBox(this)">
+                                    psychiatrist
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="1" onclick="filterCheckBox(this)">
+                                    receptionist
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="24" onclick="filterCheckBox(this)">
+                                    Recreation Therapist
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="10" onclick="filterCheckBox(this)">
+                                    RN
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="11" onclick="filterCheckBox(this)">
+                                    RPN
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="17" onclick="filterCheckBox(this)">
+                                    secretary
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="32" onclick="filterCheckBox(this)">
+                                    Site Manager
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="29" onclick="filterCheckBox(this)">
+                                    student
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="26" onclick="filterCheckBox(this)">
+                                    Support Counsellor
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="21" onclick="filterCheckBox(this)">
+                                    Support Worker
+                                </li>
+                                
+                                <li>
+                                    <input type="checkbox" name="filter_roles" value="6" onclick="filterCheckBox(this)">
+                                    Vaccine Provider
+                                </li>
+                                
+                            </ul>
+                        </div>
+                    </td>
+                    <td style="border-left:solid #ddddff 3px">
+                        <div style="height:150px;overflow:auto">
+                            <ul style="padding:0;margin:0;list-style:none inside none">
+                                <li><input type="radio" name="note_sort" value="observation_date_asc">
+                                    Encounter Date Asc
+                                </li>
+                                <li><input type="radio" name="note_sort" value="observation_date_desc">
+                                    Encounter Date Desc
+                                </li>
+                                <li><input type="radio" name="note_sort" value="providerName">
+                                    Provider
+                                </li>
+                                <li><input type="radio" name="note_sort" value="programName">
+                                    Program
+                                </li>
+                                <li><input type="radio" name="note_sort" value="roleName">
+                                    Role
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                    <td style="border-left:solid #ddddff 3px;">
+                        <div style="height:150px;overflow:auto">
+                            <ul style="padding:0;margin:0;list-style:none inside none">
+                                <li>
+                                    <input type="checkbox" name="issues" value="a" onclick="filterCheckBox(this)">
+                                    All
+                                </li>
+                                <li>
+                                    <input type="checkbox" name="issues" value="n" onclick="filterCheckBox(this)">None
+                                </li>
+
+                                
+                                <li>
+                                    <input type="checkbox" name="issues" value="45" onclick="filterCheckBox(this)">
+                                     Medical History as part of cpp
+                                </li>
+                                
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+
+        <div id="encounterTools">
+            <!--  This leaves the OCEAN toolbar accessible -->
+            <div id="ocean_placeholder" style="display:none; width: 100%">
+                <span style="display:none">Ocean Toolbar</span>
+            </div>
+
+            
+            <fieldset>
+                <legend>Template Search</legend>
+
+                <img alt="find" src="page_files/edit-find.png">
+                <input id="enTemplate" placeholder="template name" tabindex="6" size="16" type="text" onkeypress="return grabEnterGetTemplate(event)" autocomplete="off">
+
+                <div class="enTemplate_name_auto_complete" id="enTemplate_list" style="z-index: 1; display: none">
+                    &nbsp;
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>Research</legend>
+
+                <input type="text" id="keyword" name="keyword" onkeypress="return grabEnter('searchButton',event)">
+
+                <div style="display:inline-block; text-align: left;">
+                    <!-- channel -->
+                    <select id="channel" style="visibility: visible;">
+                        <option value="http://resource.oscarmcmaster.org/oscarResource/OSCAR_search?query=" selected="selected">
+                            OSCAR Search</option>
+                        <option value="http://www.google.com/search?q=">Google</option>
+                        <option value="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?SUBMIT=y&amp;CDM=Search&amp;DB=PubMed&amp;term=">
+                            Pubmed</option>
+                        <option value="http://search.nlm.nih.gov/medlineplus/query?DISAMBIGUATION=true&amp;FUNCTION=search&amp;SERVER2=server2&amp;SERVER1=server1&amp;PARAMETER=">
+                            Medline Plus</option>
+                        <option value="casemgmt/tripsearch.jsp?searchterm=">Trip Database</option>
+                        <option value="https://empendium.com/mcmtextbook/search?type=textbook&amp;q=">McMaster Text Book
+                        </option>
+                    </select>
+                </div>
+                <input type="button" id="searchButton" name="button" value="Search" onclick="popupPage(600,800,'searchpage',$('channel').options[$('channel').selectedIndex].value+urlencode($F('keyword')) ); return false;">
+            </fieldset>
+
+            <fieldset>
+                <legend>Tools</legend>
+
+                
+
+                <input type="button" value="Filter" onclick="showFilter();">
+                        
+                
+                    
+
+
+
+
+
+
+
+
+<select style="width:100px;">
+	<option selected="selected">Calculators</option>
+	<option>----------------------</option>
+
+	<option onclick="popperup(650,775,'https://bilitool.org/index.php','NeonatalBilirubin');">
+		Neonatal Bilirubin
+	</option>
+
+	<option onclick="popperup(650,775,'https://thrombosiscanada.ca/tools/?calc=perioperativeAnticoagulantAlgorithm','Peri-operativeAnticoagulation');">
+		Peri-operative Anticoagulation
+	</option>
+
+	<option onclick="popperup(650,775,'https://www.mdcalc.com/calc/2200/fibrosis-4-fib-4-index-liver-fibrosis','Fibrosis-4');">
+		Fibrosis 4 (FIB-4)
+	</option>
+
+	<option onclick="popperup(650,775,'http://www.mcw.edu/calculators/body-mass-index.htm','BodyMassIndex');">
+		Body Mass Index
+	</option>
+
+	<option onclick="popperup(525,775,'/oscar/oscarEncounter/calculators/CoronaryArteryDiseaseRiskPrediction.jsp?sex=O&amp;age=26','CoronaryArteryDiseaseRisk');">
+		Coronary Artery
+	</option>
+
+	<option onclick="popperup(525,775,'/oscar/oscarEncounter/calculators/riskcalc/index.html?sex=O&amp;age=26','Framingham');">
+		Framingham/UKPDS Risk Calculator
+	</option>
+
+	<option onclick="popperup(525,775,'http://cvrisk.mvm.ed.ac.uk/calculator/calc.asp','CVRisk');">
+		CV Risk
+	</option>
+
+	<option onclick="popperup(525,775,'/oscar/oscarEncounter/calculators/OsteoporoticFracture.jsp?sex=O&amp;age=26','OsteoporoticFracture');">
+		Osteoporotic Fracture
+	</option>
+
+	<option onclick="popperup(650,775,'http://www.mcw.edu/calculators/pregnancydate.htm','PregancyCalculator');">
+		Pregnancy Calculator
+	</option>
+
+	<option onclick="popperup(400,500,'/oscar/oscarEncounter/calculators/SimpleCalculator.jsp','SimpleCalc');">
+		Simple Calculator
+	</option>
+
+	<option onclick="popperup(650,775,'/oscar/oscarEncounter/calculators/GeneralCalculators.jsp','GeneralConversions'); ">
+		General Conversions
+	</option>
+</select>
+                
+
+                
+                <select onchange="javascript:popupPage(700,700,'Templates',this.value);">
+                    <option value="-1" selected="selected">Templates</option>
+                    <option value="-1">------------------</option>
+                    
+                        <option value="/oscar/admin/providertemplate.jsp">New / Edit Template
+                        </option>
+                        <option value="-1">------------------</option>
+                    
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ABDOMINAL PAIN, NOS">ABDOMINAL PAIN, NOS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ACNE VULGARIS">ACNE VULGARIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ALCOHOLISM">ALCOHOLISM
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ALLERGIC REACTION">ALLERGIC REACTION
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=AMMENORRHEA - PRIMAR">AMMENORRHEA - PRIMAR
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ANEMIA, NYD">ANEMIA, NYD
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ANIMAL BITES">ANIMAL BITES
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ANKYLOSING SPONDYLIT">ANKYLOSING SPONDYLIT
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ANXIETY">ANXIETY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ARRHYTHMIA (CARDIAC)">ARRHYTHMIA (CARDIAC)
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ARTHRITIS">ARTHRITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ARTHRITIS, NYD OR NO">ARTHRITIS, NYD OR NO
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ARTHRITIS, RHEUMATOI">ARTHRITIS, RHEUMATOI
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ASTHMA">ASTHMA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ATROPHIC VAGINITIS">ATROPHIC VAGINITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=BASAL AND SQUAMOUS C">BASAL AND SQUAMOUS C
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=BILIARY COLIC">BILIARY COLIC
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=BLEPHARITIS">BLEPHARITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=BREAST LUMP">BREAST LUMP
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=BRONCHITIS,ACUTE">BRONCHITIS,ACUTE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=BRONCHITIS,CHRONIC">BRONCHITIS,CHRONIC
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=BRONCHOPNEUMONIA">BRONCHOPNEUMONIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=BURSITIS">BURSITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CELLULITIS">CELLULITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CEREBRAL CONCUSSION">CEREBRAL CONCUSSION
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CERVIX, CARCINOMA IN">CERVIX, CARCINOMA IN
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CHEST PAIN-NYD (&gt;18">CHEST PAIN-NYD (&gt;18
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CHICKEN POX">CHICKEN POX
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CHRONIC PROSTATITIS">CHRONIC PROSTATITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CLUSTER HEADACHE">CLUSTER HEADACHE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CONGESTIVE HEART FAI">CONGESTIVE HEART FAI
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CONJUNCTIVITIS">CONJUNCTIVITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CONSTIPATION, RECURR">CONSTIPATION, RECURR
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CONTACT DERMATITIS">CONTACT DERMATITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CORONARY ARTERY DISE">CORONARY ARTERY DISE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CYSTITIS">CYSTITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=CYSTITIS, RECURRENT">CYSTITIS, RECURRENT
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DDD, CERVICAL">DDD, CERVICAL
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DEAFNESS">DEAFNESS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DEGENERATIVE ARTHRIT">DEGENERATIVE ARTHRIT
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DEGENERATIVE DISC DI">DEGENERATIVE DISC DI
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DEPRESSION">DEPRESSION
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DERMATOPHYTOSIS - RI">DERMATOPHYTOSIS - RI
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DIABETES MELLITUS, A">DIABETES MELLITUS, A
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DIABETES MELLITUS, J">DIABETES MELLITUS, J
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DIABETES MELLITUS, T">DIABETES MELLITUS, T
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DIAPER RASH">DIAPER RASH
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DIARRHEA, MULTIPLE V">DIARRHEA, MULTIPLE V
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DIVERTICULITIS">DIVERTICULITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DIZZINESS, NYD">DIZZINESS, NYD
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DYSMENORRHEA">DYSMENORRHEA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=DYSPLASIA OF CERVIX">DYSPLASIA OF CERVIX
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ECTOPIC PREGNANCY">ECTOPIC PREGNANCY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ECZEMA, CONTACT DERM">ECZEMA, CONTACT DERM
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=EPICONDYLITIS">EPICONDYLITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=EPILEPSY">EPILEPSY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=FAMILY PLANNING - FE">FAMILY PLANNING - FE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=FATIGUE, NYD (&gt; 15 Y">FATIGUE, NYD (&gt; 15 Y
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=FEBRILE CONVULSION,">FEBRILE CONVULSION,
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=FIBROCYSTIC DISEASE">FIBROCYSTIC DISEASE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=FIBROMYOSITIS">FIBROMYOSITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=FOLLICULITIS">FOLLICULITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=FOREIGN BODY IN NOSE">FOREIGN BODY IN NOSE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=FRACTURES">FRACTURES
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=GASTRITIS - HYPERACI">GASTRITIS - HYPERACI
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=GASTROENTERITIS AND">GASTROENTERITIS AND
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=GLAUCOMA">GLAUCOMA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=GLOMERULONEPHRITIS">GLOMERULONEPHRITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=GONORRHEA">GONORRHEA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=GOUT">GOUT
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HAY FEVER">HAY FEVER
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HEAD INJURY">HEAD INJURY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HEADACHE NYD">HEADACHE NYD
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HEMATOMA,">HEMATOMA,
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HEMATOMA,SUBCUTANEOU">HEMATOMA,SUBCUTANEOU
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HEMATURIA">HEMATURIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HEMORRHOIDS">HEMORRHOIDS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HERPANGINA">HERPANGINA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HERPES ZOSTER">HERPES ZOSTER
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HERPETIC ULCER (EYE)">HERPETIC ULCER (EYE)
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HERPETIC ULCER, VULV">HERPETIC ULCER, VULV
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HYPERLIPIDEMIA">HYPERLIPIDEMIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HYPERTENSION (ANY AG">HYPERTENSION (ANY AG
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HYPERTENSION, &lt; 75 Y">HYPERTENSION, &lt; 75 Y
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HYPERTHYROIDISM, NEW">HYPERTHYROIDISM, NEW
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HYPERTHYROIDISM, TRE">HYPERTHYROIDISM, TRE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=HYPOTHROIDISM">HYPOTHROIDISM
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=IMPETIGO or PYODERMA">IMPETIGO or PYODERMA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=IMPOTENCE">IMPOTENCE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=INFANTILE COLIC">INFANTILE COLIC
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=INFECTIOUS NOMONUCLE">INFECTIOUS NOMONUCLE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=INFERTILITY, FEMALE">INFERTILITY, FEMALE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=INFLUENZA">INFLUENZA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=INGUINAL HERNIA">INGUINAL HERNIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=INTERMITTENT CLAUDIC">INTERMITTENT CLAUDIC
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=IRITIS">IRITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=IRON DEFICIENCY ANEM">IRON DEFICIENCY ANEM
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=IRRITABLE BOWEL">IRRITABLE BOWEL
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=KERATITIS, INFLAMMAT">KERATITIS, INFLAMMAT
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=KIDNEY OBSTRUCTION">KIDNEY OBSTRUCTION
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=KNEE INJURIES">KNEE INJURIES
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=LACERATIONS">LACERATIONS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=LACERATIONS OF SKIN">LACERATIONS OF SKIN
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=LARYNGITIS">LARYNGITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=LARYNGITIS OR TRACHE">LARYNGITIS OR TRACHE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=LICE AND SCABIES">LICE AND SCABIES
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=LOBAR PNEUMONIA">LOBAR PNEUMONIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=LOW BACK PAIN, NOS,">LOW BACK PAIN, NOS,
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=LYMPHADENOPATHY NYD">LYMPHADENOPATHY NYD
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=MENOPAUSAL SYNDROME">MENOPAUSAL SYNDROME
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=MENORRHAGIA">MENORRHAGIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=MIGRAINE EQUIVALENTS">MIGRAINE EQUIVALENTS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=MONOARTICULAR ARTHRI">MONOARTICULAR ARTHRI
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=MOUTH LESION">MOUTH LESION
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=MUMPS">MUMPS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=MYOCARDIAL INFARCTIO">MYOCARDIAL INFARCTIO
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=NASAL INJURY">NASAL INJURY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=NASAL POLYP">NASAL POLYP
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=NASOPHARYNGITIS OR U">NASOPHARYNGITIS OR U
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=NASOPHARYNGITIS, CHR">NASOPHARYNGITIS, CHR
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=NOCTURNAL ENURESIS">NOCTURNAL ENURESIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=NOSEBLEED, ANTERIOR">NOSEBLEED, ANTERIOR
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=OBESITY">OBESITY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=ORCHITIS AND EPIDIDY">ORCHITIS AND EPIDIDY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=OSTEOPOROSIS">OSTEOPOROSIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=OTITIS EXTERNA">OTITIS EXTERNA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=OTITIS MEDIA -SEROUS">OTITIS MEDIA -SEROUS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=OTITIS MEDIA ACUTE">OTITIS MEDIA ACUTE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PARAPHIMOSIS">PARAPHIMOSIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PELVIC INFLAMMATORY">PELVIC INFLAMMATORY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PEPTIC ULCER">PEPTIC ULCER
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PERFORATION TYMPANIC">PERFORATION TYMPANIC
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PERITONISILLAR ABSCE">PERITONISILLAR ABSCE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PHARYNGITIS">PHARYNGITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PINWORMS">PINWORMS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PITYRIASIS ROSEA">PITYRIASIS ROSEA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PLEURISY">PLEURISY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PREGNANCY, DELIVERY,">PREGNANCY, DELIVERY,
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PROSTATE CANCER">PROSTATE CANCER
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PROSTATE, BENIGN HYP">PROSTATE, BENIGN HYP
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PROSTATE, CANCER OF">PROSTATE, CANCER OF
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PROSTATITIS">PROSTATITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PROSTATITIS CHRONIC">PROSTATITIS CHRONIC
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PSORIASIS">PSORIASIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PULMONARY EMPHYSEMA">PULMONARY EMPHYSEMA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PYELONEPHRITIS, ACUT">PYELONEPHRITIS, ACUT
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PYELONEPHRITIS, CHRO">PYELONEPHRITIS, CHRO
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=PYODERMA (INC. IMPET">PYODERMA (INC. IMPET
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=RECTAL BLEEDING">RECTAL BLEEDING
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=REFLUX ESOPHAGITIS">REFLUX ESOPHAGITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=RHEUMATIC HEAR DISEA">RHEUMATIC HEAR DISEA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=RUBELLA">RUBELLA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SCARLET FEVER">SCARLET FEVER
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SCOLIOSIS">SCOLIOSIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SECONDARY AMMENORRHE">SECONDARY AMMENORRHE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SEROUS OTITIS MEDIA">SEROUS OTITIS MEDIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SINUSITIS">SINUSITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SKIN ABSCESS">SKIN ABSCESS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SOAP">SOAP
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SPONTANEOUS ABORTION">SPONTANEOUS ABORTION
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SPRAIN OR STRAIN, NY">SPRAIN OR STRAIN, NY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=STASIS DERMATITIS">STASIS DERMATITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=STOMATITIS, HERPETIC">STOMATITIS, HERPETIC
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=STOMATITIS, MONILIAL">STOMATITIS, MONILIAL
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=STREP THROAT">STREP THROAT
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=STY">STY
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SYNCOPE, NYD">SYNCOPE, NYD
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=SYPHILIS">SYPHILIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=TENSION HEADACHE">TENSION HEADACHE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=THERAPEUTIC ABORTION">THERAPEUTIC ABORTION
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=THREATENED ABORTION">THREATENED ABORTION
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=THYROID NODULE">THYROID NODULE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=TONSILLITIS, ACUTE">TONSILLITIS, ACUTE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=TONSILLITIS, CHRONIC">TONSILLITIS, CHRONIC
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=TRANSIENT CEREBRAL I">TRANSIENT CEREBRAL I
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=TRIGEMINAL NEURALGIA">TRIGEMINAL NEURALGIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=UMBILICAL HERNIA">UMBILICAL HERNIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=URETHRITIS, NYD">URETHRITIS, NYD
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=URI">URI
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=URINARY TRACT INFECT">URINARY TRACT INFECT
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=URTICARIA">URTICARIA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=UTI">UTI
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=VAGINITIS, VULVITIS">VAGINITIS, VULVITIS
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=VENEREAL WARTS (COND">VENEREAL WARTS (COND
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=VIRAL WARTS (VERRUCA">VIRAL WARTS (VERRUCA
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=WELL BABY CARE">WELL BABY CARE
+                    </option>
+                    
+                    <option value="/oscar/admin/providertemplate.jsp?dboperation=Edit&amp;name=__Ocean">__Ocean
+                    </option>
+                    
+                </select>
+                
+
+        </fieldset></div>
+    </form>
+</div>
+
+
+
+<div style="display:none;" id="templateContainer">
+    <div id="templatePlaceholder">
+        
+    </div>
+</div>
+
+
+<form name="caseManagementEntryForm" id="caseManagementEntryForm" action="/oscar/CaseManagementEntry.do" method="post">
+    <input type="hidden" name="demographicNo" value="3001">
+    <input type="hidden" name="includeIssue" value="off">
+    <input type="hidden" name="OscarMsgType" value="null">
+    <input type="hidden" name="OscarMsgTypeLink" value="null">
+    
+
+    <input type="hidden" name="appointmentNo" value="0">
+    <input type="hidden" name="appointmentDate" value="2026-04-09">
+    <input type="hidden" name="start_time" value="00:00:00">
+    <input type="hidden" name="billRegion" value="ON">
+    <input type="hidden" name="apptProvider" value="999998">
+    <input type="hidden" name="providerview" value="999998">
+    <input type="hidden" name="toBill" id="toBill" value="false">
+    <input type="hidden" name="deleteId" value="0">
+    <input type="hidden" name="lineId" value="0">
+    <input type="hidden" name="from" value="casemgmt">
+    <input type="hidden" name="method" value="edit">
+    <input type="hidden" name="change_diagnosis" value="">
+    <input type="hidden" name="change_diagnosis_id" value="">
+    <input type="hidden" name="newIssueId" id="newIssueId" value="">
+    <input type="hidden" name="newIssueName" id="newIssueName">
+    <input type="hidden" name="ajax" value="true">
+    <input type="hidden" name="chain" value="">
+    <input type="hidden" name="caseNote.program_no" value="10034">
+    <input type="hidden" name="noteId" value="0">
+    <input type="hidden" name="note_edit" value="">
+    <input type="hidden" name="sign" value="off">
+    <input type="hidden" name="verify" value="off">
+    <input type="hidden" name="forceNote" value="false">
+    <input type="hidden" name="newNoteIdx" value="0">
+    <input type="hidden" name="notes2print" id="notes2print" value="">
+    <input type="hidden" name="printCPP" id="printCPP" value="false">
+    <input type="hidden" name="printRx" id="printRx" value="false">
+    <input type="hidden" name="printLabs" id="printLabs" value="false">
+    <input type="hidden" name="printPreventions" id="printPreventions" value="false">
+    <input type="hidden" name="printAllergies" id="printAllergies" value="false">
+    <input type="hidden" name="encType" id="encType" value="">
+    <input type="hidden" name="pType" id="pType" value="">
+    <input type="hidden" name="pStartDate" id="pStartDate" value="">
+    <input type="hidden" name="pEndDate" id="pEndDate" value="">
+    <input type="hidden" id="annotation_attribname" name="annotation_attribname" value="">
+    
+
+    <span id="notesLoading" style="display: none;">
+		<img src="page_files/DMSLoader.gif">Loading Notes...
+	</span>
+
+
+    <div id="issueList" style="background-color: #FFFFFF; height: 440px; width: 350px; position: absolute; z-index: 1; display: none; overflow: auto;">
+        <table id="issueTable" class="enTemplate_name_auto_complete" style="position: relative; left: 0; display: none;">
+            <tbody><tr>
+                <td style="height: 430px; vertical-align: bottom;">
+                    <div class="enTemplate_name_auto_complete" id="issueAutocompleteList" style="position: relative; left: 0; display: none;"></div>
+                </td>
+            </tr>
+        </tbody></table>
+    </div>
+    <div id="encMainDivWrapper">
+        <div id="encMainDiv">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+		
+    <div id="nc1" style="display: block; " class="note noteRounded encounter-note">
+
+        <input type="hidden" id="signed594" value="true">
+        <input type="hidden" id="full594" value="true">
+        <input type="hidden" id="bgColour594" value="color:#000000;background-color:#CCCCFF;">
+        <input type="hidden" id="editWarn594" value="false">
+			
+
+        <div id="n594" class="note-contents">
+            
+            <img title="Minimize Display" id="quitImg594" alt="Minimize Display" onclick="minView(event)" style="float: right; margin-right: 5px; margin-bottom: 3px; margin-top: 2px;" src="page_files/triangle_up.gif">
+            
+            <img title="Print" id="print594" alt="Toggle Print Note" onclick="togglePrint('594'   , event)" style="float: right; margin-right: 5px; margin-top: 2px;" src="page_files/printer.png">
+            
+            <a title="Edit" id="edit594" href="javascript:void(0)" onclick="editNote(event) ;return false;" style="float: right; margin-right: 5px;">
+                Edit
+            </a>
+            
+            <input type="image" id="anno594" src="page_files/annotation.png" title="Annotation" style="float: right; margin-right: 5px; margin-bottom: 3px; height:10px;width:10px" onclick="window.open('/oscar/annotation/annotation.jsp?atbname=anno1775733107659&amp;table_id=594&amp;display=EChartNote&amp;demo=3001','anwin','width=400,height=500');$('annotation_attribname').value='anno1775733107659'; return false;">
+            
+
+							<div id="wrapper594" style="">
+                    
+			  				<div id="txt594" name="">
+
+                    [25-Mar-2026 .: Tel-Progress Note] <br>has covid19<br>[Signed on 25-Mar-2026 11:24 by Alex]<br>
+                </div> <!-- end of txt594 -->
+                
+            </div> <!-- end of wrapper594 -->
+            
+							<div id="sig594" class="sig" style="">
+								<div id="sumary594" style="">
+                    <div id="observation594" style="float: right; margin-right: 3px;">
+                        Encounter Date:&nbsp;
+                        <span id="obs594">25-Mar-2026 11:24</span>&nbsp;
+                        
+                            Rev
+                        
+                        <a href="javascript:void(0)" onclick="return showHistory('594', event);">2
+                        </a>
+                        
+											
+                    </div>
+
+
+
+									
+                    <div>
+                        <span style="float: left;">Editors:</span>
+                        <ul style="list-style: none inside none; margin: 0;">
+                            <li>openodoc, doctor; </li>
+                        </ul>
+                    </div>
+									
+
+
+                    
+                    
+
+									
+                    <div style="clear: right; margin-right: 3px; float: right;">
+                        Enc Type:&nbsp;
+                        <span id="encType594"></span>
+                    </div>
+
+                    <div>
+                        <span style="float: left;">Assigned Issues</span>
+                        
+                        <br style="clear: both;">
+                    </div> <!-- end of assigned title -->
+									
+
+									
+                </div> <!-- end of div summary594 -->
+            </div> <!-- end of div sig594 -->
+            
+        </div><!-- end of div n594 -->
+    </div>
+    <!-- end of div nc1 -->
+
+    
+    
+    
+    
+    
+
+    
+
+		
+    <div id="nc2" style="display: block; " class="note noteRounded encounter-note">
+
+        <input type="hidden" id="signed595" value="true">
+        <input type="hidden" id="full595" value="true">
+        <input type="hidden" id="bgColour595" value="color:#000000;background-color:#CCCCFF;">
+        <input type="hidden" id="editWarn595" value="false">
+			
+
+        <div id="n595" class="note-contents">
+            
+            <img title="Minimize Display" id="quitImg595" alt="Minimize Display" onclick="minView(event)" style="float: right; margin-right: 5px; margin-bottom: 3px; margin-top: 2px;" src="page_files/triangle_up.gif">
+            
+            <img title="Print" id="print595" alt="Toggle Print Note" onclick="togglePrint('595'   , event)" style="float: right; margin-right: 5px; margin-top: 2px;" src="page_files/printer.png">
+            
+            <a title="Edit" id="edit595" href="javascript:void(0)" onclick="editNote(event) ;return false;" style="float: right; margin-right: 5px;">
+                Edit
+            </a>
+            
+            <input type="image" id="anno595" src="page_files/annotation.png" title="Annotation" style="float: right; margin-right: 5px; margin-bottom: 3px; height:10px;width:10px" onclick="window.open('/oscar/annotation/annotation.jsp?atbname=anno1775733107660&amp;table_id=595&amp;display=EChartNote&amp;demo=3001','anwin','width=400,height=500');$('annotation_attribname').value='anno1775733107660'; return false;">
+            
+
+							<div id="wrapper595" style="">
+                    
+			  				<div id="txt595" name="">
+
+                    [25-Mar-2026 .: Tel-Progress Note]<br>has headache<br>had heart palpitations<br>[Signed on 25-Mar-2026 11:35 by Alex]<br>
+                </div> <!-- end of txt595 -->
+                
+            </div> <!-- end of wrapper595 -->
+            
+							<div id="sig595" class="sig" style="">
+								<div id="sumary595" style="">
+                    <div id="observation595" style="float: right; margin-right: 3px;">
+                        Encounter Date:&nbsp;
+                        <span id="obs595">25-Mar-2026 11:35</span>&nbsp;
+                        
+                            Rev
+                        
+                        <a href="javascript:void(0)" onclick="return showHistory('595', event);">1
+                        </a>
+                        
+											
+                    </div>
+
+
+
+									
+                    <div>
+                        <span style="float: left;">Editors:</span>
+                        <ul style="list-style: none inside none; margin: 0;">
+                            <li>openodoc, doctor; </li>
+                        </ul>
+                    </div>
+									
+
+
+                    
+                    
+
+									
+                    <div style="clear: right; margin-right: 3px; float: right;">
+                        Enc Type:&nbsp;
+                        <span id="encType595"></span>
+                    </div>
+
+                    <div>
+                        <span style="float: left;">Assigned Issues</span>
+                        
+                        <br style="clear: both;">
+                    </div> <!-- end of assigned title -->
+									
+
+									
+                </div> <!-- end of div summary595 -->
+            </div> <!-- end of div sig595 -->
+            
+        </div><!-- end of div n595 -->
+    </div>
+    <!-- end of div nc2 -->
+
+    
+    
+    
+    
+    
+
+    
+
+		
+    <div id="nc3" style="display: block; " class="note noteRounded encounter-note">
+
+        <input type="hidden" id="signed596" value="true">
+        <input type="hidden" id="full596" value="true">
+        <input type="hidden" id="bgColour596" value="color:#000000;background-color:#CCCCFF;">
+        <input type="hidden" id="editWarn596" value="false">
+			
+
+        <div id="n596" class="note-contents">
+            
+            <img title="Minimize Display" id="quitImg596" alt="Minimize Display" onclick="minView(event)" style="float: right; margin-right: 5px; margin-bottom: 3px; margin-top: 2px;" src="page_files/triangle_up.gif">
+            
+            <img title="Print" id="print596" alt="Toggle Print Note" onclick="togglePrint('596'   , event)" style="float: right; margin-right: 5px; margin-top: 2px;" src="page_files/printer.png">
+            
+            <a title="Edit" id="edit596" href="javascript:void(0)" onclick="editNote(event) ;return false;" style="float: right; margin-right: 5px;">
+                Edit
+            </a>
+            
+            <input type="image" id="anno596" src="page_files/annotation.png" title="Annotation" style="float: right; margin-right: 5px; margin-bottom: 3px; height:10px;width:10px" onclick="window.open('/oscar/annotation/annotation.jsp?atbname=anno1775733107663&amp;table_id=596&amp;display=EChartNote&amp;demo=3001','anwin','width=400,height=500');$('annotation_attribname').value='anno1775733107663'; return false;">
+            
+
+							<div id="wrapper596" style="">
+                    
+			  				<div id="txt596" name="">
+
+                    [03-Apr-2026 .: Tel-Progress Note] <br>eats noodles for breakfast<br>[Verified and Signed on 03-Apr-2026 10:01 by Alex]<br>
+                </div> <!-- end of txt596 -->
+                
+            </div> <!-- end of wrapper596 -->
+            
+							<div id="sig596" class="sig" style="">
+								<div id="sumary596" style="">
+                    <div id="observation596" style="float: right; margin-right: 3px;">
+                        Encounter Date:&nbsp;
+                        <span id="obs596">03-Apr-2026 10:01</span>&nbsp;
+                        
+                            Rev
+                        
+                        <a href="javascript:void(0)" onclick="return showHistory('596', event);">1
+                        </a>
+                        
+											
+                    </div>
+
+
+
+									
+                    <div>
+                        <span style="float: left;">Editors:</span>
+                        <ul style="list-style: none inside none; margin: 0;">
+                            <li>openodoc, doctor; </li>
+                        </ul>
+                    </div>
+									
+
+
+                    
+                    
+
+									
+                    <div style="clear: right; margin-right: 3px; float: right;">
+                        Enc Type:&nbsp;
+                        <span id="encType596"></span>
+                    </div>
+
+                    <div>
+                        <span style="float: left;">Assigned Issues</span>
+                        
+                        <br style="clear: both;">
+                    </div> <!-- end of assigned title -->
+									
+
+									
+                </div> <!-- end of div summary596 -->
+            </div> <!-- end of div sig596 -->
+            
+        </div><!-- end of div n596 -->
+    </div>
+    <!-- end of div nc3 -->
+
+    
+    
+    
+    
+    
+
+    
+
+		
+    <div id="nc4" style="display: block; cursor: pointer;" class="note">
+
+        <input type="hidden" id="signed597" value="true">
+        <input type="hidden" id="full597" value="false">
+        <input type="hidden" id="bgColour597" value="color:#FFFFFF;background-color:#996633;">
+        <input type="hidden" id="editWarn597" value="false">
+			
+
+        <div id="n597" class="note-contents">
+            
+
+							<div id="wrapper597" style="color:#FFFFFF;background-color:#996633;">
+                    
+			  				<div id="txt597" name="expandableReadonlyNoteText">
+
+                    sd
+                </div> <!-- end of txt597 -->
+                
+                <div id="observation597" style="display:ruby;">
+                    Encounter Date:&nbsp;
+                    <span id="obs597">09-Apr-2026 6:35</span>
+                    
+                    &nbsp;
+                    Rev
+                    
+                    <a style="color:#ddddff;" href="javascript:void(0)" onclick="return showHistory('597', event);">1
+                    </a>
+                    
+                </div> <!-- end of observation597 -->
+                
+            </div> <!-- end of wrapper597 -->
+            
+        </div><!-- end of div n597 -->
+    </div>
+    <!-- end of div nc4 -->
+
+    
+    
+    
+    
+    
+
+    
+ 
+
+
+
+<div id="nc00" class="note noteRounded encounter-note">
+    <input type="hidden" id="signed0" value="false">
+    <input type="hidden" id="full0" value="true">
+    <input type="hidden" id="bgColour0" value="color:#000000;background-color:#CCCCFF;">
+    <input type="hidden" id="editWarn0" value="false">
+    <div id="n0">
+        <textarea tabindex="7" cols="84" rows="10" class="txtArea boxsizingBorder" wrap="soft" style="line-height: 1.1em; height: 53px;" name="caseNote_note" id="caseNote_note0">[09-Apr-2026 .: Tel-Progress Note] 
+</textarea>
+        <div class="sig" id="sig0">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+        
+            
+                
+                <div id="summary0" style="color: rgb(0, 0, 0); background-color: rgb(204, 204, 255);">
+                    <div id="observation0" style="float: right; margin-right: 3px;">
+            
+            
+        
+    
+    
+
+</div>
+
+<div style="margin: 0 3px 0 0;"><span style="float: right;">
+    
+        
+        
+            
+            Encounter Date&nbsp;
+            <img src="page_files/cal.gif" id="observationDate_cal" alt="calendar">&nbsp;
+            <input type="text" id="observationDate" name="observation_date" ondblclick="this.value='';" style="border: medium; width: 140px; color: rgb(0, 0, 0); background-color: rgb(204, 204, 255);" readonly="readonly">
+            rev
+            <a href="#" onclick="return showHistory('', event);">
+                
+            </a>
+        
+    
+</span></div>
+
+<div style="margin-left: 3px;"><span style="float: left;">
+Editors:</span>
+
+    
+    
+        <div style="margin: 0;">&nbsp;</div>
+    
+
+</div>
+
+
+
+
+
+<div id="current_note_addon"></div>
+
+
+<div style="clear: right; margin: 0 3px 0 0; float: right;">
+    Enc Type:&nbsp;
+    <span id="encType0">
+        
+            
+                <input type="text" id="encTypeSelect0_combo" class="encTypeCombo" autocomplete="off" readonly="readonly"><div id="encTypeSelect0_options" class="autocomplete" style="display: none;"></div><select id="encTypeSelect0" class="encTypeCombo" name="caseNote.encounter_type" style="display: none;">
+                    <option value="" selected="selected"></option>
+                    <option value="face to face encounter with client">face to face encounter with client</option>
+                    <option value="telephone encounter with client">telephone encounter with client</option>
+                    <option value="email encounter with client">email encounter with client</option>
+                    <option value="encounter without client">encounter without client</option>
+
+                    
+                </select>
+            
+            
+        
+    </span>
+</div>
+
+
+
+
+
+
+
+    <div style="margin: 0px;">
+        <br style="clear: both;">
+    </div>
+
+
+
+
+<div id="noteIssues">
+    <div id="noteIssues-resolved" style="margin: 0; background-color: #CCCCFF; display: none;">
+        <b>Reference Resolved Issues</b>
+        
+        <table id="setIssueList">
+            
+
+
+    
+
+        </table>
+    </div>
+
+    <!-- end of div noteIssues-resolved -->
+
+    
+    <div id="noteIssues-unresolved" style="margin: 0px; background-color: #CCCCFF; display: none;">
+        <b>Reference Unresolved Issues</b>
+
+        <table id="setIssueList">
+            
+    
+
+        
+        
+        
+        
+        
+        
+        
+
+        
+
+        <tbody><tr><td style="width: 50%; background-color: #CCCCFF;">
+            
+            
+
+            
+            
+
+            <input type="checkbox" id="noteIssue0" name="issueCheckList[0].checked">
+
+            <a href="#" onclick="return displayIssue('windowMedical_History_as_part_of_cpp');">
+                Medical History as part of cpp
+            </a>
+
+            
+
+            &nbsp;
+            <a href="#" onclick="return changeDiagnosisUnresolved('0');">Change</a>
+
+            <div id="windowMedical_History_as_part_of_cpp" style="margin-left: 20px; display: none;">
+                <div>
+                    <div style="width: 50%; float: left; display: inline;">
+                        <input type="radio" name="issueCheckList[0].issue.acute" value="true" onchange="this.form.method.value='issueChange'; this.form.lineId.value='0'; return ajaxUpdateIssues('issueChange', $('noteIssues').up().id);"> Acute
+                    </div>
+                    <div style="width: 50%; float: left; display: inline; clear: right;">
+                        <input type="radio" name="issueCheckList[0].issue.acute" value="false" onchange="this.form.method.value='issueChange'; this.form.lineId.value='0'; return ajaxUpdateIssues('issueChange', $('noteIssues').up().id);"> Chronic
+                    </div>
+                    <div style="width: 50%; float: left; display: inline;">
+                        <input type="radio" name="issueCheckList[0].issue.certain" value="true" disabled="false" onchange="this.form.method.value='issueChange'; this.form.lineId.value='0'; return ajaxUpdateIssues('issueChange', $('noteIssues').up().id);"> Certain
+                    </div>
+                    <div style="width: 50%; float: left; display: inline; clear: right;">
+                        <input type="radio" name="issueCheckList[0].issue.certain" value="false" disabled="false" onchange="this.form.method.value='issueChange'; this.form.lineId.value='0'; return ajaxUpdateIssues('issueChange', $('noteIssues').up().id);"> Uncertain
+                    </div>
+                    <div style="width: 50%; float: left; display: inline;">
+                        <input type="radio" name="issueCheckList[0].issue.major" value="true" disabled="false" onchange="this.form.method.value='issueChange'; this.form.lineId.value='0'; return ajaxUpdateIssues('issueChange', $('noteIssues').up().id);"> Major
+                    </div>
+                    <div style="width: 50%; float: left; display: inline; clear: right;">
+                        <input type="radio" name="issueCheckList[0].issue.major" value="false" disabled="false" onchange="this.form.method.value='issueChange'; this.form.lineId.value='0'; return ajaxUpdateIssues('issueChange', $('noteIssues').up().id);"> Not Major
+                    </div>
+                    <div style="width: 50%; float: left; display: inline;">
+                        <input type="radio" name="issueCheckList[0].issue.resolved" value="true" onchange="this.form.method.value='issueChange'; this.form.lineId.value='0'; return ajaxUpdateIssues('issueChange', $('noteIssues').up().id);"> Resolved
+                    </div>
+                    <div style="width: 50%; float: left; display: inline; clear: right;">
+                        <input type="radio" name="issueCheckList[0].issue.resolved" value="false" onchange="this.form.method.value='issueChange'; this.form.lineId.value='0'; return ajaxUpdateIssues('issueChange', $('noteIssues').up().id);"> Unresolved
+                    </div>
+                    <div style="text-align: center;">
+                        <input type="text" name="issueCheckList[0].issueDisplay.role" size="10" disabled="false">
+                    </div>
+                </div>
+            </div>
+        </td>
+
+        
+            </tr>
+        
+
+    
+
+        </tbody></table>
+    </div> <!-- end of div noteIssues-unresolved -->
+</div>
+<!-- end of div noteIssues -->
+
+<div id="autosaveTime" class="sig" style="text-align:center; margin:0px;"><i>Draft Saved 9-Apr-2026 7:12:35</i></div>
+
+</div>
+</div> <!-- end of div sig0 -->
+
+
+    </div> <!-- end of div n0  -->
+</div>
+<!-- end of div nc00 -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        </div>
+    </div>
+    <div id="control-panel">
+        <div class="row">
+
+            <div id="form-control-panel">
+                <div id="save-sign-bill-buttons">
+                    
+                    <input tabindex="17" type="image" src="page_files/media-floppy.png" id="saveImg" onclick="Event.stop(event);return saveNoteAjax('save', 'list');" title="Save">
+                    <input tabindex="18" type="image" src="page_files/document-new.png" id="newNoteImg" onclick="newNote(event); return false;" title="New Note">
+                    <input tabindex="19" type="image" src="page_files/note-save.png" id="signSaveImg" onclick="document.forms['caseManagementEntryForm'].sign.value='on';Event.stop(event);return savePage('saveAndExit', '');" title="Sign &amp; Save">
+                    <input tabindex="20" type="image" src="page_files/verify-sign.png" id="signVerifyImg" onclick="document.forms['caseManagementEntryForm'].sign.value='on';document.forms['caseManagementEntryForm'].verify.value='on';Event.stop(event);return savePage('saveAndExit', '');" title="Verify &amp; Sign">
+                    
+                    <input tabindex="21" type="image" src="page_files/dollar-sign-icon.png" onclick="document.forms['caseManagementEntryForm'].sign.value='on';document.forms['caseManagementEntryForm'].toBill.value='true';Event.stop(event);return savePage('saveAndExit', '');" title="Sign Save &amp; Bill">
+                    
+
+
+                    <input tabindex="23" type="image" src="page_files/system-log-out.png" onclick="closeEnc(event);return false;" title="Exit">
+                    <input tabindex="24" type="image" src="page_files/document-print.png" onclick="return printSetup(event);" title="Print Notes" id="imgPrintEncounter">
+                </div>
+                <div id="timer-control">
+                    <input type="text" placeholder="Time Label" id="timer-note" title="Time Label">
+                    <button type="button" onclick="pasteTimer()" id="aTimer" title="Paste timer data">00:49</button>
+                    <button type="button" id="toggleTimer" onclick="toggleATimer(this)" title="Start/Pause timer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pause-fill" viewBox="0 0 16 16">
+                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="assignIssueSection">
+                <input tabindex="8" type="text" id="issueAutocomplete" class="issueAutocomplete ui-autocomplete-input" placeholder="Search Issue" title="Search Issues" name="issueSearch" onkeydown="return submitIssue(event);" autocomplete="off">
+                <input tabindex="9" type="button" id="asgnIssues" title="Assign Selected Issue" value="Assign">
+                <span id="busy" style="display: none">
+		            <img src="page_files/busy.gif" alt="Working ...">
+		        </span>
+            </div>
+        </div>
+        <div class="row">
+            <div id="note-control-panel">
+                <button type="button" onclick="return showHideIssues(event, 'noteIssues-resolved');">Display Resolved Issues</button>
+                <button type="button" onclick="return showHideIssues(event, 'noteIssues-unresolved');">Display Unresolved Issues</button>
+                <button type="button" onclick="notesLoadAll();">Load All Notes</button>
+                <button type="button" onclick="toggleFullViewForAll();">Expand All Loaded Notes</button>
+                <button type="button" onclick="toggleCollapseViewForAll();">Collapse All Loaded Notes</button>
+                <button type="button" onclick="popupPage(500,200,'noteBrowser3001','casemgmt/noteBrowser.jsp?demographic_no=3001&amp;FirstTime=1');">
+                    Browse Notes</button>
+            </div>
+        </div>
+    </div>
+
+</form>
+
+
+
+
+
+</div>
+        </div>
+    </div>
+    <!-- hovering divs -->
+    <div id="showEditNote" class="showEdContent" style="right: 327px; top: 102px; display: none;">
+        <form id="frmIssueNotes" action="/oscar/CaseManagementEntry.do?method=issueNoteSave&amp;providerNo=999998&amp;demographicNo=3001&amp;appointmentNo=null&amp;noteId=597" method="post" onsubmit="return updateCPPNote();">
+            <input type="hidden" id="reloadUrl" name="reloadUrl" value="hc=996633&amp;method=listNotes&amp;providerNo=999998&amp;demographicNo=3001&amp;issue_code=MedHistory&amp;title=oscarEncounter.medHistory.title&amp;cmd=divR1I2">
+            <input type="hidden" id="containerDiv" name="containerDiv" value="divR1I2">
+            <input type="hidden" id="issueChange" name="issueChange" value="false">
+            <input type="hidden" id="archived" name="archived" value="false">
+            <input type="hidden" id="annotation_attrib" name="annotation_attrib" value="anno1775733124781">
+            <h3 id="winTitle">Medical History</h3>
+
+            <textarea cols="50" rows="15" id="noteEditTxt" name="value" class="boxsizingBorder">had chicken pox</textarea>
+            <br>
+
+            <table>
+                <tbody><tr id="Itemproblemdescription" style="display: none;">
+                    <td>Problem Description:
+                    </td>
+                    <td><input type="text" id="problemdescription" name="problemdescription"></td>
+                </tr>
+                <tr id="Itemstartdate">
+                    <td>Start Date:</td>
+                    <td><input type="text" id="startdate" name="startdate" size="12"> (YYYY-MM-DD)
+                    </td>
+                </tr>
+                <tr id="Itemresolutiondate">
+                    <td>Resolution Date:
+                    </td>
+                    <td><input type="text" id="resolutiondate" name="resolutiondate" size="12"> (YYYY-MM-DD)
+                    </td>
+                </tr>
+                <tr id="Itemprocedure" style="">
+                    <td>Procedure:
+                    </td>
+                    <td><input type="text" id="procedure" name="procedure"></td>
+                </tr>
+                <tr id="Itemageatonset" style="display: none;">
+                    <td>Age at Onset:</td>
+                    <td><input type="text" id="ageatonset" name="ageatonset" size="2"></td>
+                </tr>
+
+                <tr id="Itemproceduredate" style="">
+                    <td>Procedure Date:
+                    </td>
+                    <td><input type="text" id="proceduredate" name="proceduredate" size="12"> (YYYY-MM-DD)
+                    </td>
+                </tr>
+                <tr id="Itemtreatment" style="">
+                    <td>Treatment:</td>
+                    <td><input type="text" id="treatment" name="treatment"></td>
+                </tr>
+                <tr id="Itemproblemstatus" style="">
+                    <td>Problem Status:
+                    </td>
+                    <td><input type="text" id="problemstatus" name="problemstatus" size="8"> (active/resolved/...)</td>
+                </tr>
+                <tr id="Itemexposuredetail" style="display: none;">
+                    <td>Exposure Details:
+                    </td>
+                    <td><input type="text" id="exposuredetail" name="exposuredetail"></td>
+                </tr>
+                <tr id="Itemrelationship" style="display: none;">
+                    <td>Relationship:
+                    </td>
+                    <td><input type="text" id="relationship" name="relationship"></td>
+                </tr>
+                <tr id="Itemlifestage" style="">
+                    <td>Life Stage:</td>
+                    <td><select name="lifestage" id="lifestage">
+                        <option value="" selected="selected">
+                            Not Set
+                        </option>
+                        <option value="N">
+                            Newborn: Birth to 28 days
+                        </option>
+                        <option value="I">
+                            Infant: 29 days to 2 years
+                        </option>
+                        <option value="C">
+                            Child: 2 years to 15 years
+                        </option>
+                        <option value="T">
+                            Adolescent: 16 to 17
+                        </option>
+                        <option value="A">
+                            Adult: 18 years
+                        </option>
+                    </select></td>
+                </tr>
+                <tr id="Itemhidecpp" style="">
+                    <td>Hide CPP:</td>
+                    <td><select id="hidecpp" name="hidecpp">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select></td>
+                </tr>
+            </tbody></table>
+            <div class="control-panel">
+                <input type="hidden" id="startTag" value="Start Time">
+                <input type="hidden" id="endTag" value="End Time">
+                <br> <span style="float: right; margin-right: 10px;">
+				<input type="image" src="page_files/copy.png" title="Copy to Current Note" onclick="copyCppToCurrentNote(); return false;"> <input type="image" src="page_files/annotation.png" title="Annotation" id="anno" style="padding-right: 10px;"> <input type="image" src="page_files/edit-cut.png" title="Archive" onclick="$('archived').value='true';" style="padding-right: 10px;">
+				<input type="image" src="page_files/note-save.png" title="Sign &amp; Save" onclick="$('archived').value='false';" style="padding-right: 10px;">
+				<input type="image" src="page_files/system-log-out.png" title="Exit" onclick="this.focus();$('channel').style.visibility ='visible';$('showEditNote').style.display='none';return false;">
+			</span>
+                <label for="position">
+                    Insert Position
+                </label>
+                <select id="position" name="position">
+                    <option id="popt0" value="0" selected="selected">1</option>
+                <option id="popt1" value="1">2</option></select>
+            </div>
+            <div id="issueNoteInfo"><div style="width: 50%;text-align: right;float: right;clear: both;"><i>Encounter Date:&nbsp;2026-04-09 06:35:48.0&nbsp;rev<a href="#" onclick='return showHistory("597",event);'>1</a></i></div><div style="width: 50%;text-align:left;"><label>Editors: </label><ul style="list-style: none outside none; margin:0;"><li>openodoc, doctor; </li></ul></div><div style="width:100%"><ul id="issueIdList" style="list-style: none; margin:0;"><li><input type="checkbox" id="issueId" name="issue_id" checked="checked" value="67">Medical History as part of cpp</li></ul></div></div>
+            <div id="issueListCPP" style="background-color: #FFFFFF; height: 200px; width: 350px; position: absolute; z-index: 1; display: none; overflow: auto;">
+                <div class="enTemplate_name_auto_complete issueAutocompleteList" id="issueAutocompleteListCPP" style="position: relative; left: 0; display: none;"></div>
+            </div>
+            <div class="add-issues">
+                <label for="issueAutocompleteCPP">
+                    Assign Issues
+                </label>
+                &nbsp;<input tabindex="100" type="text" id="issueAutocompleteCPP" class="issueAutocomplete ui-autocomplete-input" name="issueSearch" style="z-index: 2;" size="25" autocomplete="off">&nbsp; <span id="busy2" style="display: none"><img style="position: absolute;" src="page_files/busy.gif" alt="Working ..."></span>
+            </div>
+        </form>
+    </div>
+    <div id="printOps" class="printOps">
+        <h3 style="margin-bottom: 5px; text-align: center;">
+            Print Dialog
+        </h3>
+        <form id="frmPrintOps" action="" onsubmit="return false;">
+            <table id="printElementsTable">
+                <tbody><tr>
+                    <td><input type="radio" id="printopSelected" name="printop" value="selected">
+                        Selected</td>
+                    <td>
+                        
+                            <img style="cursor: pointer;" title="Print" id="imgPrintCPP" alt="Toggle Print CPP" onclick="return printInfo(this,'printCPP');" src="page_files/printer.png">&nbsp;CPP
+                        
+                    </td>
+                </tr>
+                <tr>
+                    <td><input type="radio" id="printopAll" name="printop" value="all">
+                        All</td>
+                    <td><img style="cursor: pointer;" title="Print" id="imgPrintRx" alt="Toggle Print Rx" onclick="return printInfo(this, 'printRx');" src="page_files/printer.png">&nbsp;Rx</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><img style="cursor: pointer;" title="Print" id="imgPrintLabs" alt="Toggle Print Labs" onclick="return printInfo(this, 'printLabs');" src="page_files/printer.png">&nbsp;Labs</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><img style="cursor: pointer;" title="Print" id="imgPrintPreventions" alt="Toggle Print Preventions" onclick="return printInfo(this, 'printPreventions');" src="page_files/printer.png">&nbsp;Preventions</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><img style="cursor: pointer;" title="Print" id="imgPrintAllergies" alt="Toggle Print Allergies" onclick="return printInfo(this, 'printAllergies');" src="page_files/printer.png">&nbsp;Allergies</td>
+                </tr>
+                <!--  extension point -->
+                <tr id="printDateRow">
+                    <td><input type="radio" id="printopDates" name="printop" value="dates">
+                        Dates&nbsp;<a style="font-variant: small-caps;" href="#" onclick="return printToday(event);">Today</a></td>
+                    <td></td>
+                </tr>
+            </tbody></table>
+
+            <div style="float: left; margin-left: 5px; width: 30px;">
+                From
+                :
+            </div>
+            <img src="page_files/cal.gif" id="printStartDate_cal" alt="calendar">&nbsp;<input type="text" id="printStartDate" name="printStartDate" ondblclick="this.value='';" style="font-style: italic; border: 1px solid #7682b1; width: 125px; background-color: #FFFFFF;" readonly="readonly"><br>
+            <div style="float: left; margin-left: 5px; width: 30px;">
+                To
+                :
+            </div>
+            <img src="page_files/cal.gif" id="printEndDate_cal" alt="calendar">&nbsp;<input type="text" id="printEndDate" name="printEndDate" ondblclick="this.value='';" style="font-style: italic; border: 1px solid #7682b1; width: 125px; background-color: #FFFFFF;" readonly="readonly"><br>
+            <div style="margin-top: 5px; text-align: center">
+                <input type="submit" id="printOp" style="border: 1px solid #7682b1;" value="Print" onclick="return printNotes();">
+
+                <input type="submit" id="cancelprintOp" style="border: 1px solid #7682b1;" value="Cancel" onclick="$('printOps').style.display='none';"> <input type="submit" id="clearprintOp" style="border: 1px solid #7682b1;" value="Clear" onclick="$('printOps').style.display='none'; return clearAll(event);">
+            </div>
+
+            
+        </form>
+    </div>
+    <div id="encounterModal"></div>
+    
+
+    
+
+<ul id="ui-id-1" tabindex="0" class="ui-menu ui-widget ui-widget-content ui-autocomplete ui-front" style="display: none;"></ul><div role="status" aria-live="assertive" aria-relevant="additions" class="ui-helper-hidden-accessible"></div><ul id="ui-id-2" tabindex="0" class="ui-menu ui-widget ui-widget-content ui-autocomplete ui-front" style="display: none;"></ul><div role="status" aria-live="assertive" aria-relevant="additions" class="ui-helper-hidden-accessible"></div></body></html>
