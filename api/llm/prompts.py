@@ -3,7 +3,7 @@ This module defines the system prompts used for the LLM calls in the app
 """
 
 # default system prompt for app
-SYSTEM_PROMPT_WITH_CONTEXT = """
+SYSTEM_PROMPT = """
 You are a helpful assistant.
 
 The user input may be formatted like this:
