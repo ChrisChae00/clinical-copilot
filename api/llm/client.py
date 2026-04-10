@@ -10,7 +10,7 @@ from llm.prompts import SYSTEM_PROMPT
 
 
 # str version
-async def get_llm_response_str(prompt: str) -> str:
+async def get_llm_response_str(prompt: str, context: dict | None = None) -> str:
     """
 
     Send a prompt to the Ollama LLM server and return the response.
@@ -44,9 +44,20 @@ async def get_llm_response_str(prompt: str) -> str:
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
 
+    system = SYSTEM_PROMPT
+    if context:
+        context_str = json.dumps(context, ensure_ascii=False, indent=2)
+        system = (
+            f"{SYSTEM_PROMPT}\n\n"
+            "### CURRENT PATIENT CONTEXT ###\n"
+            "The following information was extracted from the current EMR page. "
+            "Use it to give context-aware, relevant responses.\n"
+            f"{context_str}"
+        )
+
     payload = {
         "model": MODEL_NAME,
-        "system": SYSTEM_PROMPT,
+        "system": system,
         "prompt": prompt,
         "stream": False,
         "options": {"num_ctx": MAX_CONTEXT_LEN},

@@ -10,6 +10,18 @@ const responseArea = document.getElementById('response-area');
 const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 
+// ── Patient context ───────────────────────────────────────────
+let patientContext = null;
+
+// Request context from the host page (content.js) on load
+window.parent.postMessage({ type: 'REQUEST_CONTEXT' }, '*');
+
+window.addEventListener('message', (event) => {
+  if (event.data?.type === 'CONTEXT_RESPONSE') {
+    patientContext = event.data.context;
+  }
+});
+
 // Close button collapses the sidebar via postMessage to content.js
 closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
@@ -36,21 +48,26 @@ form.addEventListener('submit', async (e) => {
   // Display user message
   appendMessage(prompt, 'user');
   input.value = '';
-  
+
   // Loading state
   setLoading(true);
 
   try {
-    // TODO Sprint 2: attach patient context extracted from current EMR page
+    // Build request body — include extracted patient context if available
+    const body = { prompt };
+    if (patientContext && Object.keys(patientContext).length > 0) {
+      body.context = patientContext;
+    }
+
     // TODO Sprint 2: enable streaming (ReadableStream) for faster perceived response
-    // TODO Sprint 2: maintain conversation history (send prior turns to proxy)
+    // TODO Sprint 3: maintain conversation history (send prior turns to proxy)
     const resp = await fetch(`${API_URL}/generate-str`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': API_KEY
       },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify(body)
     });
 
     if (!resp.ok) {
