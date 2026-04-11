@@ -1,12 +1,86 @@
 // Clinical Ally — content script
-// Injects the sidebar into the host page via shadow DOM (open mode for Sprint 1 testability)
-// TODO Sprint 2: switch to closed shadow root
+// Injects the sidebar into the host page via shadow DOM
 
 (function () {
   'use strict';
 
   // Prevent double-injection
   if (document.getElementById('clinical-ally-host')) return;
+
+  // ── OSCAR context extraction ──────────────────────────────────
+  function extractOSCARContext() {
+    const ctx = {
+      page_url: window.location.href,
+      page_title: document.title,
+      page_type: 'unknown',
+    };
+
+    try {
+      // ── Consultation Request page ──────────────────────────────
+      if (document.getElementById('EctConsultationFormRequest2Form')) {
+        ctx.page_type = 'consultation_request';
+
+        // Patient header (e.g. "Smith, John M 45")
+        const header = document.querySelector('.TopStatusBar h2');
+        if (header) ctx.patient_header = header.textContent.trim();
+
+        // Demographics from label→value table rows
+        const labelMap = {
+          'Patient':         'patient_name',
+          'Birthdate':       'patient_dob',
+          'Sex':             'patient_sex',
+          'Health Card No.': 'patient_hcn',
+          'Tel.No.':         'patient_phone',
+          'Cell No.':        'patient_cell',
+        };
+        document.querySelectorAll('tr').forEach((row) => {
+          const labelEl = row.querySelector('td.tite4');
+          const valueEl = row.querySelector('td.tite1');
+          if (!labelEl || !valueEl) return;
+          const key = labelMap[labelEl.textContent.trim()];
+          if (key) {
+            // prefer link text for patient name
+            const link = valueEl.querySelector('a');
+            ctx[key] = (link || valueEl).textContent.trim();
+          }
+        });
+
+        // Clinical textareas (only include if non-empty)
+        const textareaFields = [
+          ['currentMedications',    'current_medications'],
+          ['allergies',             'allergies'],
+          ['clinicalInformation',   'clinical_information'],
+          ['concurrentProblems',    'concurrent_problems'],
+        ];
+        textareaFields.forEach(([id, key]) => {
+          const el = document.getElementById(id);
+          if (el && el.value.trim()) ctx[key] = el.value.trim();
+        });
+
+        const form = document.getElementById('EctConsultationFormRequest2Form');
+        const rfcEl = form.querySelector('textarea[name="reasonForConsultation"]');
+        if (rfcEl && rfcEl.value.trim()) ctx.reason_for_consultation = rfcEl.value.trim();
+
+        // Consultation dropdowns
+        const getSelected = (el) => el ? (el.options[el.selectedIndex]?.text || '').trim() : '';
+        ctx.referring_practitioner = getSelected(form.querySelector('select[name="providerNo"]'));
+        ctx.service    = getSelected(document.getElementById('service'));
+        ctx.specialist = getSelected(document.getElementById('specialist'));
+        ctx.urgency    = getSelected(document.getElementById('urgency'));
+
+        const referalDate = document.getElementById('referalDate');
+        if (referalDate && referalDate.value) ctx.referral_date = referalDate.value;
+
+        const demoNo = document.getElementById('demographicNo');
+        if (demoNo) ctx.demographic_no = demoNo.value;
+      }
+    } catch (err) {
+      console.error('[ClinicalAlly] extractOSCARContext failed:', err);
+      ctx.extraction_error = err.message;
+    }
+
+    return ctx;
+  }
 
   const PANEL_WIDTH_EXPANDED = 360;
   const PANEL_WIDTH_COLLAPSED = 48;
@@ -135,10 +209,19 @@
 
   toggleBtn.addEventListener('click', expand);
 
-  // Listen for close message from panel.js
+  // Listen for messages from panel.js (inside iframe)
   window.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'CLINICAL_ALLY_CLOSE') {
+    if (!event.data) return;
+    // Only accept messages from our own iframe — rejects any other frame on the page
+    if (event.source !== iframe.contentWindow) return;
+    if (event.data.type === 'CLINICAL_ALLY_CLOSE') {
       collapse();
+    } else if (event.data.type === 'REQUEST_CONTEXT') {
+      const context = extractOSCARContext();
+      iframe.contentWindow.postMessage(
+        { type: 'CONTEXT_RESPONSE', context },
+        browser.runtime.getURL('')  // restrict to extension origin, not wildcard
+      );
     }
   });
 })();

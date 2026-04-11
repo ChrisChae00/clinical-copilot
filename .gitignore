@@ -146,3 +146,7 @@ venv/
 *.egg-info/
 
 Open-O/
+.DS_Store
+
+# OSCAR page snapshots (dev reference files — may contain PHI)
+copy.html 

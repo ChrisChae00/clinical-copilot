@@ -33,14 +33,20 @@ async def generate_str(request: Request):
         raise HTTPException(status_code=400, detail="Request body must be valid JSON")
 
     prompt = body.get("prompt")
+    context = body.get("context")  # optional dict extracted from EMR page DOM
 
     if not isinstance(prompt, str) or not prompt.strip():
         raise HTTPException(
             status_code=400, detail="prompt is required and must be a non-empty string"
         )
 
+    if context is not None and not isinstance(context, dict):
+        raise HTTPException(
+            status_code=400, detail="context must be a JSON object if provided"
+        )
+
     try:
-        return await get_llm_response_str(prompt=prompt)
+        return await get_llm_response_str(prompt=prompt, context=context)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except RuntimeError as e:

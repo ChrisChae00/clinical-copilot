@@ -10,6 +10,32 @@ const responseArea = document.getElementById('response-area');
 const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 
+// ── Patient context ───────────────────────────────────────────
+const EXTENSION_ORIGIN = new URL(browser.runtime.getURL('')).origin;
+
+// Returns a Promise that resolves to the current EMR context (or null on timeout).
+// Sends REQUEST_CONTEXT to the host page and waits up to timeoutMs for a response.
+function requestContext(timeoutMs = 500) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      console.warn('[ClinicalAlly] Context response timed out — proceeding without patient context');
+      resolve(null);
+    }, timeoutMs);
+
+    function handler(event) {
+      if (event.origin !== EXTENSION_ORIGIN) return;
+      if (event.data?.type !== 'CONTEXT_RESPONSE') return;
+      clearTimeout(timer);
+      window.removeEventListener('message', handler);
+      resolve(event.data.context);
+    }
+
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: 'REQUEST_CONTEXT' }, EXTENSION_ORIGIN);
+  });
+}
+
 // Close button collapses the sidebar via postMessage to content.js
 closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
@@ -36,21 +62,28 @@ form.addEventListener('submit', async (e) => {
   // Display user message
   appendMessage(prompt, 'user');
   input.value = '';
-  
+
   // Loading state
   setLoading(true);
 
   try {
-    // TODO Sprint 2: attach patient context extracted from current EMR page
+    // Fetch fresh context on every submission so the AI sees the current form state
+    const context = await requestContext();
+
+    const body = { prompt };
+    if (context && context.page_type !== 'unknown') {
+      body.context = context;
+    }
+
     // TODO Sprint 2: enable streaming (ReadableStream) for faster perceived response
-    // TODO Sprint 2: maintain conversation history (send prior turns to proxy)
+    // TODO Sprint 3: maintain conversation history (send prior turns to proxy)
     const resp = await fetch(`${API_URL}/generate-str`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': API_KEY
       },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify(body)
     });
 
     if (!resp.ok) {
