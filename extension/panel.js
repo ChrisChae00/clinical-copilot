@@ -11,16 +11,30 @@ const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 
 // ── Patient context ───────────────────────────────────────────
-let patientContext = null;
+const EXTENSION_ORIGIN = new URL(browser.runtime.getURL('')).origin;
 
-// Request context from the host page (content.js) on load
-window.parent.postMessage({ type: 'REQUEST_CONTEXT' }, '*');
+// Returns a Promise that resolves to the current EMR context (or null on timeout).
+// Sends REQUEST_CONTEXT to the host page and waits up to timeoutMs for a response.
+function requestContext(timeoutMs = 500) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      console.warn('[ClinicalAlly] Context response timed out — proceeding without patient context');
+      resolve(null);
+    }, timeoutMs);
 
-window.addEventListener('message', (event) => {
-  if (event.data?.type === 'CONTEXT_RESPONSE') {
-    patientContext = event.data.context;
-  }
-});
+    function handler(event) {
+      if (event.origin !== EXTENSION_ORIGIN) return;
+      if (event.data?.type !== 'CONTEXT_RESPONSE') return;
+      clearTimeout(timer);
+      window.removeEventListener('message', handler);
+      resolve(event.data.context);
+    }
+
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: 'REQUEST_CONTEXT' }, EXTENSION_ORIGIN);
+  });
+}
 
 // Close button collapses the sidebar via postMessage to content.js
 closeBtn.addEventListener('click', () => {
@@ -53,10 +67,12 @@ form.addEventListener('submit', async (e) => {
   setLoading(true);
 
   try {
-    // Build request body — include extracted patient context if available
+    // Fetch fresh context on every submission so the AI sees the current form state
+    const context = await requestContext();
+
     const body = { prompt };
-    if (patientContext && Object.keys(patientContext).length > 0) {
-      body.context = patientContext;
+    if (context && context.page_type !== 'unknown') {
+      body.context = context;
     }
 
     // TODO Sprint 2: enable streaming (ReadableStream) for faster perceived response
