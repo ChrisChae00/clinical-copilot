@@ -6,7 +6,8 @@ import json
 
 from auth import require_api_key
 from fastapi import APIRouter, Depends, HTTPException, Request
-from llm.client import get_llm_response_str
+from fastapi.responses import StreamingResponse
+from llm.client import get_llm_response_str, stream_llm_response
 
 router = APIRouter()
 
@@ -14,17 +15,15 @@ router = APIRouter()
 @router.post("/generate-str", dependencies=[Depends(require_api_key)])
 async def generate_str(request: Request):
     """
-    /generate-str endpoint that takes a JSON body with a "prompt" field and returns the LLM response
+    /generate-str endpoint. Streams SSE tokens when Accept: text/event-stream header is present,
+    otherwise returns full response as JSON string.
 
-    Example request body:
-
-    {
-    "prompt": "What da dawg doing?"
-    }
-
-    Example curl command:
-    curl -X POST http://localhost:8000/generate-str -H "Content-Type: application/json" -H "X-API-Key: api-key-placeholder" -d "{\"prompt\":\"New fone, who dis?\"}"
-
+    Example curl (streaming):
+    curl -X POST http://localhost:8000/generate-str \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: api-key-placeholder" \
+      -H "Accept: text/event-stream" \
+      -d '{"prompt":"Summarize patient history"}'
     """
 
     try:
@@ -44,6 +43,18 @@ async def generate_str(request: Request):
         raise HTTPException(
             status_code=400, detail="context must be a JSON object if provided"
         )
+
+    wants_stream = "text/event-stream" in request.headers.get("accept", "")
+
+    if wants_stream:
+        try:
+            return StreamingResponse(
+                stream_llm_response(prompt=prompt, context=context),
+                media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
     try:
         return await get_llm_response_str(prompt=prompt, context=context)

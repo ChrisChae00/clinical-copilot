@@ -59,13 +59,13 @@ form.addEventListener('submit', async (e) => {
       body.context = patientContext;
     }
 
-    // TODO Sprint 2: enable streaming (ReadableStream) for faster perceived response
     // TODO Sprint 3: maintain conversation history (send prior turns to proxy)
     const resp = await fetch(`${API_URL}/generate-str`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': API_KEY
+        'X-API-Key': API_KEY,
+        'Accept': 'text/event-stream'
       },
       body: JSON.stringify(body)
     });
@@ -75,8 +75,34 @@ form.addEventListener('submit', async (e) => {
       throw new Error(err.detail || `HTTP ${resp.status}`);
     }
 
-    const data = await resp.json();
-    appendMessage(data, 'assistant');
+    const msgDiv = appendMessage('', 'assistant');
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    setLoading(false);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete last line
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') break;
+        try {
+          const token = JSON.parse(payload);
+          msgDiv.textContent += token;
+          msgDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        } catch {
+          // malformed chunk — skip
+        }
+      }
+    }
   } catch (err) {
     appendMessage(`Error: ${err.message}`, 'error');
   } finally {
@@ -90,6 +116,7 @@ function appendMessage(text, role) {
   div.textContent = text;
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return div;
 }
 
 function setLoading(loading) {

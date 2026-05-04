@@ -3,10 +3,57 @@ Client that interfaces with the LLM (Ollama)
 """
 
 import json
+from typing import AsyncGenerator
 
 import httpx
 from config import MAX_CONTEXT_LEN, MODEL_NAME, OLLAMA_URL
 from llm.prompts import SYSTEM_PROMPT
+
+
+async def stream_llm_response(prompt: str, context: dict | None = None) -> AsyncGenerator[str, None]:
+    """
+    Stream tokens from Ollama as server-sent events.
+    Yields SSE-formatted strings: `data: <token>\n\n`
+    """
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError("prompt must be a non-empty string")
+
+    system = SYSTEM_PROMPT
+    if context:
+        context_str = json.dumps(context, ensure_ascii=False, indent=2)
+        system = (
+            f"{SYSTEM_PROMPT}\n\n"
+            "### CURRENT PATIENT CONTEXT ###\n"
+            "The following information was extracted from the current EMR page. "
+            "Use it to give context-aware, relevant responses.\n"
+            f"{context_str}"
+        )
+
+    payload = {
+        "model": MODEL_NAME,
+        "system": system,
+        "prompt": prompt,
+        "stream": True,
+        "options": {"num_ctx": MAX_CONTEXT_LEN},
+    }
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        async with client.stream("POST", f"{OLLAMA_URL}/api/generate", json=payload) as response:
+            if response.status_code != 200:
+                raise RuntimeError(f"Ollama returned status code {response.status_code}")
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                try:
+                    chunk = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                token = chunk.get("response", "")
+                if token:
+                    yield f"data: {json.dumps(token)}\n\n"
+                if chunk.get("done"):
+                    yield "data: [DONE]\n\n"
+                    return
 
 
 # str version
