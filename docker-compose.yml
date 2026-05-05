@@ -20,10 +20,13 @@ services:
       API_KEY: api-key-placeholder
       OLLAMA_MODEL: granite4
       MAX_CONTEXT_LEN: 4096
+      HF_TOKEN: ${HF_TOKEN:-}
     volumes:
       - ./api:/app
+      - whisperx_models:/root/.cache
     depends_on:
       - ollama
 
 volumes:
   ollama_data:
+  whisperx_models:

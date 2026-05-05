@@ -349,6 +349,7 @@
     display: 'none',
   });
   iframe.setAttribute('title', 'Clinical Ally sidebar');
+  iframe.setAttribute('allow', 'microphone');
   shadow.appendChild(iframe);
 
   // ── Collapse / expand ─────────────────────────────────────────
