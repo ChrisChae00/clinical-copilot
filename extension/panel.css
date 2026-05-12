@@ -183,6 +183,33 @@ body {
   background-color: rgba(0, 102, 204, 0.1);
 }
 
+#voice-btn.recording {
+  color: #dc2626;
+  animation: mic-pulse 1s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.message.transcript {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  align-self: flex-start;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.transcript-line {
+  margin-bottom: 2px;
+}
+
+.speaker-label {
+  font-weight: 700;
+  color: #0066cc;
+}
+
 #send-btn {
   flex: 0 0 auto;
   height: 36px;
