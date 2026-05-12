@@ -79,10 +79,11 @@ form.addEventListener('submit', async (e) => {
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let streamDone = false;
 
     setLoading(false);
 
-    while (true) {
+    while (!streamDone) {
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -93,7 +94,10 @@ form.addEventListener('submit', async (e) => {
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const payload = line.slice(6).trim();
-        if (payload === '[DONE]') break;
+        if (payload === '[DONE]') {
+          streamDone = true;
+          break;
+        }
         try {
           const token = JSON.parse(payload);
           msgDiv.textContent += token;
@@ -103,6 +107,19 @@ form.addEventListener('submit', async (e) => {
         }
       }
     }
+
+    // flush any token remaining in buffer if stream ended without a trailing newline
+    if (buffer.startsWith('data: ')) {
+      const payload = buffer.slice(6).trim();
+      if (payload && payload !== '[DONE]') {
+        try {
+          msgDiv.textContent += JSON.parse(payload);
+        } catch {
+          // malformed chunk — skip
+        }
+      }
+    }
+    reader.cancel();
   } catch (err) {
     appendMessage(`Error: ${err.message}`, 'error');
   } finally {

@@ -47,14 +47,11 @@ async def generate_str(request: Request):
     wants_stream = "text/event-stream" in request.headers.get("accept", "")
 
     if wants_stream:
-        try:
-            return StreamingResponse(
-                stream_llm_response(prompt=prompt, context=context),
-                media_type="text/event-stream",
-                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-            )
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+        return StreamingResponse(
+            stream_llm_response(prompt=prompt, context=context),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     try:
         return await get_llm_response_str(prompt=prompt, context=context)
