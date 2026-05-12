@@ -10,7 +10,6 @@
   // ── OSCAR context extraction ──────────────────────────────────
 
   const _val   = (id) => document.getElementById(id)?.value?.trim() || '';
-  const _text  = (sel) => document.querySelector(sel)?.textContent?.trim() || '';
   const _selOpt = (el) => el ? (el.options[el.selectedIndex]?.text || '').trim() : '';
 
   // Extracts patient header + demographic_no present on most OSCAR pages
@@ -145,16 +144,18 @@
     _extractCommon(ctx);
 
     const labs = [];
-    // OSCAR lab results use tables — grab test name, value, range, date
-    document.querySelectorAll('table tr').forEach((row) => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length < 3) return;
-      const name  = cells[0].textContent.trim();
-      const value = cells[1].textContent.trim();
-      const range = cells[2]?.textContent?.trim() || '';
-      if (name && value && name.length < 60) {
-        labs.push(range ? `${name}: ${value} (ref: ${range})` : `${name}: ${value}`);
-      }
+    // Skip the first row of each table to avoid picking up column headers
+    document.querySelectorAll('table').forEach((table) => {
+      Array.from(table.querySelectorAll('tr')).slice(1).forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 3) return;
+        const name  = cells[0].textContent.trim();
+        const value = cells[1].textContent.trim();
+        const range = cells[2]?.textContent?.trim() || '';
+        if (name && value && name.length < 60) {
+          labs.push(range ? `${name}: ${value} (ref: ${range})` : `${name}: ${value}`);
+        }
+      });
     });
     if (labs.length) ctx.lab_results = labs;
 
@@ -168,15 +169,20 @@
     _extractCommon(ctx);
 
     const rxList = [];
-    document.querySelectorAll('table tr, .drugList li').forEach((row) => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length >= 2) {
-        const drug = cells[0].textContent.trim();
-        const dose = cells[1]?.textContent?.trim() || '';
-        if (drug && drug.length < 80 && !drug.match(/^\s*Drug\s*$/i)) {
-          rxList.push(dose ? `${drug} — ${dose}` : drug);
+    // Skip the first row of each table to avoid picking up column headers
+    document.querySelectorAll('table').forEach((table) => {
+      Array.from(table.querySelectorAll('tr')).slice(1).forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 2) {
+          const drug = cells[0].textContent.trim();
+          const dose = cells[1]?.textContent?.trim() || '';
+          if (drug && drug.length < 80) rxList.push(dose ? `${drug} — ${dose}` : drug);
         }
-      }
+      });
+    });
+    document.querySelectorAll('.drugList li').forEach((li) => {
+      const text = li.textContent.trim();
+      if (text && text.length < 80) rxList.push(text);
     });
     if (rxList.length) ctx.prescriptions = rxList;
   }
@@ -207,13 +213,16 @@
     _extractCommon(ctx);
 
     const items = [];
-    document.querySelectorAll('table tr').forEach((row) => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length >= 2) {
-        const item = cells[0].textContent.trim();
-        const status = cells[1].textContent.trim();
-        if (item && item.length < 80) items.push(`${item}: ${status}`);
-      }
+    // Skip the first row of each table to avoid picking up column headers
+    document.querySelectorAll('table').forEach((table) => {
+      Array.from(table.querySelectorAll('tr')).slice(1).forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 2) {
+          const item = cells[0].textContent.trim();
+          const status = cells[1].textContent.trim();
+          if (item && status && item.length < 80) items.push(`${item}: ${status}`);
+        }
+      });
     });
     if (items.length) ctx.preventive_care_items = items;
   }
@@ -235,7 +244,7 @@
       _extractDemographic(ctx);
     } else if (url.includes('/lab/') || url.includes('labReport') || url.includes('LabReport')) {
       _extractLabResults(ctx);
-    } else if (url.includes('/oscarRx/') || url.includes('RxPreview') || url.includes('prescription')) {
+    } else if (url.includes('/oscarRx/') || url.includes('RxPreview') || new URL(url).pathname.includes('/prescription')) {
       _extractPrescriptions(ctx);
     } else if (url.includes('providercontrol') || url.includes('provider/scheduler')) {
       _extractScheduler(ctx);
