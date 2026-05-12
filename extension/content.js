@@ -236,23 +236,28 @@
 
     const url = window.location.href;
 
-    if (document.getElementById('EctConsultationFormRequest2Form')) {
-      _extractConsultationRequest(ctx);
-    } else if (url.includes('/casemgmt/') || url.includes('caseManagement')) {
-      _extractEncounter(ctx);
-    } else if (url.includes('/demographic/demographiccontrol') || url.includes('addDemographic')) {
-      _extractDemographic(ctx);
-    } else if (url.includes('/lab/') || url.includes('labReport') || url.includes('LabReport')) {
-      _extractLabResults(ctx);
-    } else if (url.includes('/oscarRx/') || url.includes('RxPreview') || new URL(url).pathname.includes('/prescription')) {
-      _extractPrescriptions(ctx);
-    } else if (url.includes('providercontrol') || url.includes('provider/scheduler')) {
-      _extractScheduler(ctx);
-    } else if (url.includes('/oscarPrevention/') || url.includes('Prevention')) {
-      _extractPreventiveCare(ctx);
-    } else {
-      // Generic fallback — extract patient header if present on any OSCAR page
-      _extractCommon(ctx);
+    try {
+      if (document.getElementById('EctConsultationFormRequest2Form')) {
+        _extractConsultationRequest(ctx);
+      } else if (url.includes('/casemgmt/') || url.includes('caseManagement')) {
+        _extractEncounter(ctx);
+      } else if (url.includes('/demographic/demographiccontrol') || url.includes('addDemographic')) {
+        _extractDemographic(ctx);
+      } else if (url.includes('/lab/') || url.includes('labReport') || url.includes('LabReport')) {
+        _extractLabResults(ctx);
+      } else if (url.includes('/oscarRx/') || url.includes('RxPreview') || new URL(url).pathname.includes('/prescription')) {
+        _extractPrescriptions(ctx);
+      } else if (url.includes('providercontrol') || url.includes('provider/scheduler')) {
+        _extractScheduler(ctx);
+      } else if (url.includes('/oscarPrevention/') || url.includes('Prevention')) {
+        _extractPreventiveCare(ctx);
+      } else {
+        // Generic fallback — extract patient header if present on any OSCAR page
+        _extractCommon(ctx);
+      }
+    } catch (err) {
+      console.error('[ClinicalAlly] extractOSCARContext failed:', err);
+      ctx.extraction_error = err.message;
     }
 
     return ctx;
@@ -389,11 +394,16 @@
   // Listen for messages from panel.js (inside iframe)
   window.addEventListener('message', (event) => {
     if (!event.data) return;
+    // Only accept messages from our own iframe — rejects any other frame on the page
+    if (event.source !== iframe.contentWindow) return;
     if (event.data.type === 'CLINICAL_ALLY_CLOSE') {
       collapse();
     } else if (event.data.type === 'REQUEST_CONTEXT') {
       const context = extractOSCARContext();
-      iframe.contentWindow.postMessage({ type: 'CONTEXT_RESPONSE', context }, '*');
+      iframe.contentWindow.postMessage(
+        { type: 'CONTEXT_RESPONSE', context },
+        browser.runtime.getURL('')  // restrict to extension origin, not wildcard
+      );
     }
   });
 })();
