@@ -21,12 +21,16 @@ services:
       OLLAMA_MODEL: granite4
       MAX_CONTEXT_LEN: 4096
       HF_TOKEN: ${HF_TOKEN:-}
+      HF_HOME: /root/.cache/huggingface
+      TORCH_HOME: /root/.cache/torch
     volumes:
       - ./api:/app
-      - whisperx_models:/root/.cache
+      - whisperx_models:/root/.cache/huggingface
+      - torch_models:/root/.cache/torch
     depends_on:
       - ollama
 
 volumes:
   ollama_data:
   whisperx_models:
+  torch_models:

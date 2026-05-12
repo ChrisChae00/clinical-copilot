@@ -1,11 +1,16 @@
+import logging
 import os
 import tempfile
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
+MAX_AUDIO_BYTES = 25 * 1024 * 1024  # 25 MB
+
 _whisperx_model = None
-_align_models: dict = {}
+_align_models: dict = {}  # lang -> (model, metadata)
 _diarize_model = None
 _device: str | None = None
 
@@ -50,11 +55,17 @@ def _get_diarize_model():
 
 @router.post("/transcribe")
 async def transcribe(audio: UploadFile = File(...)):
+    """Accepts a WebM or WAV audio upload (max 25 MB) and returns diarized transcript segments."""
     content_type = audio.content_type or ""
     suffix = ".webm" if "webm" in content_type else ".wav"
 
+    tmp_path = None
+    data = await audio.read(MAX_AUDIO_BYTES + 1)
+    if len(data) > MAX_AUDIO_BYTES:
+        raise HTTPException(status_code=413, detail="Audio file exceeds 25 MB limit")
+
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(await audio.read())
+        tmp.write(data)
         tmp_path = tmp.name
 
     try:
@@ -70,13 +81,13 @@ async def transcribe(audio: UploadFile = File(...)):
             align_model, metadata = whisperx.load_align_model(
                 language_code=lang, device=device
             )
-            _align_models[lang] = align_model
-            _align_models[f"{lang}_meta"] = metadata
+            _align_models[lang] = (align_model, metadata)
 
+        align_model, metadata = _align_models[lang]
         result = whisperx.align(
             result["segments"],
-            _align_models[lang],
-            _align_models[f"{lang}_meta"],
+            align_model,
+            metadata,
             tmp_path,
             device,
             return_char_alignments=False,
@@ -101,8 +112,10 @@ async def transcribe(audio: UploadFile = File(...)):
 
         return {"segments": segments, "language": lang}
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Transcription failed")
+        raise HTTPException(status_code=500, detail="Transcription failed")
 
     finally:
-        os.unlink(tmp_path)
+        if tmp_path:
+            os.unlink(tmp_path)

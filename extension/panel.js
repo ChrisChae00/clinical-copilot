@@ -47,7 +47,8 @@ voiceBtn.addEventListener('click', async () => {
   }
 
   audioChunks = [];
-  mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+  const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+  mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
 
   mediaRecorder.ondataavailable = (e) => {
     if (e.data.size > 0) audioChunks.push(e.data);
@@ -57,7 +58,7 @@ voiceBtn.addEventListener('click', async () => {
     stream.getTracks().forEach((t) => t.stop());
     voiceBtn.classList.remove('recording');
     isRecording = false;
-    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    const blob = new Blob(audioChunks, mimeType ? { type: mimeType } : {});
     await sendAudioForTranscription(blob);
   };
 
