@@ -57,7 +57,11 @@ async def stream_llm_response(prompt: str, context: dict | None = None) -> Async
 
 
 # str version
-async def get_llm_response_str(prompt: str, context: dict | None = None) -> str:
+async def get_llm_response_str(
+    prompt: str,
+    context: dict | None = None,
+    system_prompt: str | None = None,
+) -> str:
     """
 
     Send a prompt to the Ollama LLM server and return the response.
@@ -91,16 +95,18 @@ async def get_llm_response_str(prompt: str, context: dict | None = None) -> str:
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
 
-    system = SYSTEM_PROMPT
+    base = system_prompt if system_prompt is not None else SYSTEM_PROMPT
     if context:
         context_str = json.dumps(context, ensure_ascii=False, indent=2)
         system = (
-            f"{SYSTEM_PROMPT}\n\n"
+            f"{base}\n\n"
             "### CURRENT PATIENT CONTEXT ###\n"
             "The following information was extracted from the current EMR page. "
             "Use it to give context-aware, relevant responses.\n"
             f"{context_str}"
         )
+    else:
+        system = base
 
     payload = {
         "model": MODEL_NAME,

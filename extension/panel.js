@@ -102,11 +102,41 @@ async function sendAudioForTranscription(blob) {
 
     const { segments } = await resp.json();
     appendTranscript(segments);
+    analyzeTranscript(segments);
   } catch (err) {
     appendMessage(`Transcription error: ${err.message}`, 'error');
   } finally {
     setLoading(false);
     voiceBtn.disabled = false;
+  }
+}
+
+async function analyzeTranscript(segments) {
+  const analyzingDiv = appendMessage('Analyzing conversation for clinical actions…', 'assistant');
+  analyzingDiv.classList.add('analyzing');
+
+  try {
+    const context = await requestContext();
+    const body = { segments };
+    if (context && context.page_type !== 'unknown') body.context = context;
+
+    const resp = await fetch(`${API_URL}/analyze-transcript`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+
+    const { summary, actions } = await resp.json();
+    analyzingDiv.remove();
+    appendClinicalActions(summary, actions || []);
+  } catch (err) {
+    analyzingDiv.textContent = `Analysis error: ${err.message}`;
+    analyzingDiv.className = 'message error';
   }
 }
 
@@ -218,6 +248,92 @@ form.addEventListener('submit', async (e) => {
     setLoading(false);
   }
 });
+
+const ACTION_TYPE_LABELS = {
+  referral: 'Referral',
+  lab_order: 'Lab Order',
+  prescription: 'Prescription',
+  follow_up: 'Follow-Up',
+  imaging: 'Imaging',
+  note: 'Note',
+  alert: 'Alert',
+};
+
+const PRIORITY_LABELS = { high: 'Urgent', medium: 'Important', low: 'Routine' };
+
+function appendClinicalActions(summary, actions) {
+  const container = document.createElement('div');
+  container.className = 'message clinical-actions';
+
+  const header = document.createElement('div');
+  header.className = 'actions-header';
+  header.textContent = 'Suggested Clinical Actions';
+  container.appendChild(header);
+
+  if (summary) {
+    const summaryEl = document.createElement('p');
+    summaryEl.className = 'actions-summary';
+    summaryEl.textContent = summary;
+    container.appendChild(summaryEl);
+  }
+
+  if (actions.length === 0) {
+    const none = document.createElement('p');
+    none.className = 'actions-empty';
+    none.textContent = 'No specific actions identified.';
+    container.appendChild(none);
+  } else {
+    actions.forEach((action) => {
+      const card = document.createElement('div');
+      card.className = `action-card priority-${action.priority || 'low'}`;
+
+      const cardHeader = document.createElement('div');
+      cardHeader.className = 'action-card-header';
+
+      const badge = document.createElement('span');
+      badge.className = `action-badge priority-${action.priority || 'low'}`;
+      badge.textContent = PRIORITY_LABELS[action.priority] || action.priority;
+
+      const type = document.createElement('span');
+      type.className = 'action-type';
+      type.textContent = ACTION_TYPE_LABELS[action.type] || action.type;
+
+      cardHeader.appendChild(badge);
+      cardHeader.appendChild(type);
+      card.appendChild(cardHeader);
+
+      const title = document.createElement('div');
+      title.className = 'action-title';
+      title.textContent = action.title;
+      card.appendChild(title);
+
+      if (action.description) {
+        const desc = document.createElement('div');
+        desc.className = 'action-description';
+        desc.textContent = action.description;
+        card.appendChild(desc);
+      }
+
+      if (action.details && Object.keys(action.details).length > 0) {
+        const detailsList = document.createElement('div');
+        detailsList.className = 'action-details';
+        Object.entries(action.details).forEach(([k, v]) => {
+          const item = document.createElement('span');
+          item.className = 'action-detail-item';
+          const val = Array.isArray(v) ? v.join(', ') : v;
+          item.textContent = `${k}: ${val}`;
+          detailsList.appendChild(item);
+        });
+        card.appendChild(detailsList);
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  responseArea.appendChild(container);
+  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
 
 function appendMessage(text, role) {
   const div = document.createElement('div');
