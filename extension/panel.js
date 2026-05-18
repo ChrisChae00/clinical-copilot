@@ -9,12 +9,19 @@ const voiceBtn = document.getElementById('voice-btn');
 const responseArea = document.getElementById('response-area');
 const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
+const gatherContextBtn = document.getElementById('gather-context-btn');
+const viewContextBtn = document.getElementById('view-context-btn');
+const clearContextBtn = document.getElementById('clear-context-btn');
+const contextView = document.getElementById('context-view');
 
 // ── Patient context ───────────────────────────────────────────
-const EXTENSION_ORIGIN = new URL(browser.runtime.getURL('')).origin;
+// storage
+const CONTEXT_STORAGE_KEY = 'clinicalAllyContext';
+const storageLocal = browser.storage?.local;
+if (!storageLocal) {
+  throw new Error('Extension storage is unavailable. Context cannot be shared across windows.');
+}
 
-// Returns a Promise that resolves to the current EMR context (or null on timeout).
-// Sends REQUEST_CONTEXT to the host page and waits up to timeoutMs for a response.
 function requestContext(timeoutMs = 500) {
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -24,7 +31,7 @@ function requestContext(timeoutMs = 500) {
     }, timeoutMs);
 
     function handler(event) {
-      if (event.origin !== EXTENSION_ORIGIN) return;
+      if (event.source !== window.parent) return;
       if (event.data?.type !== 'CONTEXT_RESPONSE') return;
       clearTimeout(timer);
       window.removeEventListener('message', handler);
@@ -32,13 +39,114 @@ function requestContext(timeoutMs = 500) {
     }
 
     window.addEventListener('message', handler);
-    window.parent.postMessage({ type: 'REQUEST_CONTEXT' }, EXTENSION_ORIGIN);
+    window.parent.postMessage({ type: 'REQUEST_CONTEXT' }, '*');
   });
+}
+
+// Request raw page HTML
+function requestPageHtml(timeoutMs = 1000) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      console.warn('[ClinicalAlly] Page HTML response timed out');
+      resolve(null);
+    }, timeoutMs);
+
+    function handler(event) {
+      if (event.source !== window.parent) return;
+      if (event.data?.type !== 'PAGE_HTML_RESPONSE') return;
+      clearTimeout(timer);
+      window.removeEventListener('message', handler);
+      resolve(event.data.html || null);
+    }
+
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: 'REQUEST_PAGE_HTML' }, '*');
+  });
+}
+// getter
+async function getStoredContext() {
+  const result = await storageLocal.get(CONTEXT_STORAGE_KEY);
+  return result?.[CONTEXT_STORAGE_KEY] ?? null;
+}
+// setter
+async function setStoredContext(context) {
+  await storageLocal.set({ [CONTEXT_STORAGE_KEY]: context });
+}
+// clear
+async function clearStoredContext() {
+  await storageLocal.remove(CONTEXT_STORAGE_KEY);
+}
+
+function renderContextView(context) {
+  if (!context) {
+    contextView.textContent = 'No context stored.';
+    return;
+  }
+  contextView.textContent = JSON.stringify(context, null, 2);
+}
+
+// button loading states
+function setContextButtonsLoading(loading) {
+  gatherContextBtn.disabled = loading;
+  clearContextBtn.disabled = loading;
+  gatherContextBtn.textContent = loading ? 'Gathering...' : 'Gather context';
 }
 
 // Close button collapses the sidebar via postMessage to content.js
 closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
+});
+
+// ── Context controls ─────────────────────────────────────
+let contextVisible = false;
+
+viewContextBtn.addEventListener('click', async () => {
+  contextVisible = !contextVisible;
+  contextView.classList.toggle('hidden', !contextVisible);
+  viewContextBtn.textContent = contextVisible ? 'Hide context' : 'View context';
+  if (contextVisible) {
+    const storedContext = await getStoredContext();
+    renderContextView(storedContext);
+  }
+});
+
+// Gather context button: fetch HTML, send to backend, store
+gatherContextBtn.addEventListener('click', async () => {
+  setContextButtonsLoading(true);
+  try {
+    const html = await requestPageHtml();
+    if (!html) throw new Error('Unable to read page HTML.');
+
+    const currentContext = await getStoredContext();
+    const resp = await fetch(`${API_URL}/process-context`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': API_KEY,
+      },
+      body: JSON.stringify({ html, context: currentContext }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+
+    const updatedContext = await resp.json();
+    await setStoredContext(updatedContext);
+    if (contextVisible) renderContextView(updatedContext);
+  } catch (err) {
+    appendMessage(`Context error: ${err.message}`, 'error');
+  } finally {
+    setContextButtonsLoading(false);
+  }
+});
+
+// Clear shared context.
+clearContextBtn.addEventListener('click', async () => {
+  await clearStoredContext();
+  if (contextVisible) renderContextView(null);
 });
 
 // ── Voice recording ───────────────────────────────────────────

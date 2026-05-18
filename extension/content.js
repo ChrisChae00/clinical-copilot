@@ -404,6 +404,12 @@
         { type: 'CONTEXT_RESPONSE', context },
         browser.runtime.getURL('')  // restrict to extension origin, not wildcard
       );
+    } else if (event.data.type === 'REQUEST_PAGE_HTML') {
+      const html = document.documentElement?.outerHTML || '';
+      iframe.contentWindow.postMessage(
+        { type: 'PAGE_HTML_RESPONSE', html },
+        browser.runtime.getURL('')
+      );
     }
   });
 })();
