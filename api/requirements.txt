@@ -7,3 +7,4 @@ python-multipart
 whisperx
 torch
 torchaudio
+beautifulsoup4
