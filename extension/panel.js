@@ -190,13 +190,13 @@ form.addEventListener('submit', async (e) => {
   setLoading(true);
 
   try {
-    // Fetch fresh context on every submission so the AI sees the current form state
-    const context = await contextManager.requestContext();
+    // get context from storage to include in API request
+    const storedContext = await contextManager.getStoredContext();
 
-    const body = { prompt };
-    if (context && context.page_type !== 'unknown') {
-      body.context = context;
-    }
+    const body = {
+      prompt,
+      context: storedContext,
+    };
 
     // TODO Sprint 3: maintain conversation history (send prior turns to proxy)
     const resp = await fetch(`${API_URL}/generate-str`, {
