@@ -55,6 +55,32 @@ window.ContextManager = class ContextManager {
     );
   }
 
+  requestAutofill(payload, timeoutMs = 120000) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        window.removeEventListener('message', handler);
+        reject(new Error('Autofill response timed out.'));
+      }, timeoutMs);
+
+      function handler(event) {
+        if (event.source !== window.parent) return;
+        if (event.data?.type !== 'AUTOFILL_RESPONSE') return;
+
+        clearTimeout(timer);
+        window.removeEventListener('message', handler);
+
+        if (event.data.ok) {
+          resolve(event.data.result);
+        } else {
+          reject(new Error(event.data.error || 'Autofill failed.'));
+        }
+      }
+
+      window.addEventListener('message', handler);
+      window.parent.postMessage({ type: 'REQUEST_AUTOFILL', ...payload }, '*');
+    });
+  }
+
   async getStoredContext() {
     const result = await this.storage.get(this.storageKey);
     return result?.[this.storageKey] ?? null;

@@ -76,6 +76,10 @@ async def autofill(request: Request):
             detail="Request body must be valid JSON",
         ) from e
 
+    # print(
+    #     f"Received /autofill request with body: {json.dumps(body, ensure_ascii=False, indent=2)}"
+    # )
+
     prompt, context, fields = _extract_autofill_body(body)
     llm_prompt = _build_autofill_prompt(prompt, context, fields)
     try:
@@ -86,6 +90,10 @@ async def autofill(request: Request):
         raise HTTPException(status_code=400, detail=str(e)) from e
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
+
+    # print(
+    #     f"LLM response for /autofill: {json.dumps(llm_response, ensure_ascii=False, indent=2)}"
+    # )
 
     return llm_response
 

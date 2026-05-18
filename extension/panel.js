@@ -10,6 +10,7 @@ const responseArea = document.getElementById('response-area');
 const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 const gatherContextBtn = document.getElementById('gather-context-btn');
+const autofillBtn = document.getElementById('autofill-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
@@ -28,8 +29,16 @@ function renderContextView(context) {
 // button loading states
 function setContextButtonsLoading(loading) {
   gatherContextBtn.disabled = loading;
+  autofillBtn.disabled = loading;
   clearContextBtn.disabled = loading;
   gatherContextBtn.textContent = loading ? 'Gathering...' : 'Gather context';
+}
+
+function setAutofillLoading(loading) {
+  autofillBtn.disabled = loading;
+  gatherContextBtn.disabled = loading;
+  clearContextBtn.disabled = loading;
+  autofillBtn.textContent = loading ? 'Autofilling...' : 'Autofill';
 }
 
 // Close button collapses the sidebar via postMessage to content.js
@@ -86,6 +95,30 @@ gatherContextBtn.addEventListener('click', async () => {
 clearContextBtn.addEventListener('click', async () => {
   await contextManager.clearStoredContext();
   if (contextVisible) renderContextView(null);
+});
+
+autofillBtn.addEventListener('click', async () => {
+  setAutofillLoading(true);
+
+  try {
+    const storedContext = await contextManager.getStoredContext();
+    if (!storedContext) {
+      throw new Error('No stored context found. Gather context first.');
+    }
+
+    const result = await contextManager.requestAutofill({
+      apiUrl: API_URL,
+      apiKey: API_KEY,
+      context: storedContext,
+      prompt: input.value.trim(),
+    });
+
+    appendAutofillMessage(result);
+  } catch (err) {
+    appendMessage(`Autofill error: ${err.message}`, 'error');
+  } finally {
+    setAutofillLoading(false);
+  }
 });
 
 // ── Voice recording ───────────────────────────────────────────
@@ -270,6 +303,54 @@ function appendMessage(text, role) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
   div.textContent = text;
+  responseArea.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return div;
+}
+
+// autofill messages for demo pursepose 
+function appendAutofillMessage(result) {
+  const applied = Array.isArray(result?.applied) ? result.applied : [];
+  const skipped = Array.isArray(result?.skipped) ? result.skipped : [];
+  const div = document.createElement('div');
+  div.className = 'message assistant autofill-summary';
+
+  const title = document.createElement('div');
+  title.className = 'autofill-title';
+  title.textContent = result?.message || (
+    applied.length ? `Autofilled ${applied.length} fields.` : 'No fields were autofilled.'
+  );
+  div.appendChild(title);
+
+  if (applied.length) {
+    const list = document.createElement('ul');
+    applied.forEach((field) => {
+      const item = document.createElement('li');
+      const label = field.label || field.field_id || 'Unlabeled field';
+      const value = field.value == null || field.value === '' ? '' : `: ${field.value}`;
+      item.textContent = `${label}${value}`;
+      list.appendChild(item);
+    });
+    div.appendChild(list);
+  }
+
+  if (skipped.length) {
+    const detail = document.createElement('div');
+    detail.className = 'autofill-detail';
+    detail.textContent = 'Skipped suggestions';
+    div.appendChild(detail);
+
+    const list = document.createElement('ul');
+    skipped.forEach((field) => {
+      const item = document.createElement('li');
+      const label = field.label || field.field_id || 'Unlabeled field';
+      const reason = field.reason ? `: ${field.reason}` : '';
+      item.textContent = `${label}${reason}`;
+      list.appendChild(item);
+    });
+    div.appendChild(list);
+  }
+
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
