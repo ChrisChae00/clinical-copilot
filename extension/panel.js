@@ -14,69 +14,8 @@ const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
 
-// ── Patient context ───────────────────────────────────────────
-// storage
-const CONTEXT_STORAGE_KEY = 'clinicalAllyContext';
-const storageLocal = browser.storage?.local;
-if (!storageLocal) {
-  throw new Error('Extension storage is unavailable. Context cannot be shared across windows.');
-}
-
-function requestContext(timeoutMs = 500) {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      window.removeEventListener('message', handler);
-      console.warn('[ClinicalAlly] Context response timed out — proceeding without patient context');
-      resolve(null);
-    }, timeoutMs);
-
-    function handler(event) {
-      if (event.source !== window.parent) return;
-      if (event.data?.type !== 'CONTEXT_RESPONSE') return;
-      clearTimeout(timer);
-      window.removeEventListener('message', handler);
-      resolve(event.data.context);
-    }
-
-    window.addEventListener('message', handler);
-    window.parent.postMessage({ type: 'REQUEST_CONTEXT' }, '*');
-  });
-}
-
-// Request raw page HTML
-function requestPageHtml(timeoutMs = 1000) {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      window.removeEventListener('message', handler);
-      console.warn('[ClinicalAlly] Page HTML response timed out');
-      resolve(null);
-    }, timeoutMs);
-
-    function handler(event) {
-      if (event.source !== window.parent) return;
-      if (event.data?.type !== 'PAGE_HTML_RESPONSE') return;
-      clearTimeout(timer);
-      window.removeEventListener('message', handler);
-      resolve(event.data.html || null);
-    }
-
-    window.addEventListener('message', handler);
-    window.parent.postMessage({ type: 'REQUEST_PAGE_HTML' }, '*');
-  });
-}
-// getter
-async function getStoredContext() {
-  const result = await storageLocal.get(CONTEXT_STORAGE_KEY);
-  return result?.[CONTEXT_STORAGE_KEY] ?? null;
-}
-// setter
-async function setStoredContext(context) {
-  await storageLocal.set({ [CONTEXT_STORAGE_KEY]: context });
-}
-// clear
-async function clearStoredContext() {
-  await storageLocal.remove(CONTEXT_STORAGE_KEY);
-}
+// Shared context manager keeps storage and host-page messaging together.
+const contextManager = new ContextManager();
 
 function renderContextView(context) {
   if (!context) {
@@ -106,7 +45,7 @@ viewContextBtn.addEventListener('click', async () => {
   contextView.classList.toggle('hidden', !contextVisible);
   viewContextBtn.textContent = contextVisible ? 'Hide context' : 'View context';
   if (contextVisible) {
-    const storedContext = await getStoredContext();
+    const storedContext = await contextManager.getStoredContext();
     renderContextView(storedContext);
   }
 });
@@ -115,10 +54,10 @@ viewContextBtn.addEventListener('click', async () => {
 gatherContextBtn.addEventListener('click', async () => {
   setContextButtonsLoading(true);
   try {
-    const html = await requestPageHtml();
+    const html = await contextManager.requestPageHtml();
     if (!html) throw new Error('Unable to read page HTML.');
 
-    const currentContext = await getStoredContext();
+    const currentContext = await contextManager.getStoredContext();
     const resp = await fetch(`${API_URL}/process-context`, {
       method: 'POST',
       headers: {
@@ -134,7 +73,7 @@ gatherContextBtn.addEventListener('click', async () => {
     }
 
     const updatedContext = await resp.json();
-    await setStoredContext(updatedContext);
+    await contextManager.setStoredContext(updatedContext);
     if (contextVisible) renderContextView(updatedContext);
   } catch (err) {
     appendMessage(`Context error: ${err.message}`, 'error');
@@ -145,7 +84,7 @@ gatherContextBtn.addEventListener('click', async () => {
 
 // Clear shared context.
 clearContextBtn.addEventListener('click', async () => {
-  await clearStoredContext();
+  await contextManager.clearStoredContext();
   if (contextVisible) renderContextView(null);
 });
 
@@ -252,7 +191,7 @@ form.addEventListener('submit', async (e) => {
 
   try {
     // Fetch fresh context on every submission so the AI sees the current form state
-    const context = await requestContext();
+    const context = await contextManager.requestContext();
 
     const body = { prompt };
     if (context && context.page_type !== 'unknown') {
