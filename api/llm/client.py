@@ -95,18 +95,8 @@ async def get_llm_response_str(
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
 
-    base = system_prompt if system_prompt is not None else SYSTEM_PROMPT
-    if context:
-        context_str = json.dumps(context, ensure_ascii=False, indent=2)
-        system = (
-            f"{base}\n\n"
-            "### CURRENT PATIENT CONTEXT ###\n"
-            "The following information was extracted from the current EMR page. "
-            "Use it to give context-aware, relevant responses.\n"
-            f"{context_str}"
-        )
-    else:
-        system = base
+    system = system_prompt if system_prompt is not None else SYSTEM_PROMPT
+    prompt = _build_contextual_prompt(prompt, context)
 
     payload = {
         "model": MODEL_NAME,
