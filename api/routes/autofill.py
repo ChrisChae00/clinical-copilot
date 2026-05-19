@@ -2,6 +2,7 @@
 This module defines the API routes for the autofill feature.
 It accepts a payload with the following structure:
 {
+    "prompt": "optional prompt to guide the LLM's response, e.g. 'Fill in the following fields based on the context'",
     "context": { ...json... } // context about the user and the page
     "fields": [
         {
@@ -63,7 +64,7 @@ router = APIRouter()
 @router.post("/autofill", dependencies=[Depends(require_api_key)])
 async def autofill(request: Request):
     """
-    API endpoint for autofill feature. It accepts a JSON body with "context" and "fields",
+    API endpoint for autofill feature. It accepts a JSON body with "prompt" (optional), "context" and "fields",
     builds a prompt for the LLM, and returns the LLM response as JSON.
     """
 
@@ -75,59 +76,63 @@ async def autofill(request: Request):
             detail="Request body must be valid JSON",
         ) from e
 
-    context, fields = _extract_autofill_body(body)
-    prompt = _build_autofill_prompt(context=context, fields=fields)
+    # print(
+    #     f"Received /autofill request with body: {json.dumps(body, ensure_ascii=False, indent=2)}"
+    # )
 
+    prompt, context, fields = _extract_autofill_body(body)
+    llm_prompt = _build_autofill_prompt(prompt, context, fields)
     try:
         llm_response = await get_llm_response_json(
-            prompt=prompt,
-            system_prompt=SYSTEM_PROMPT_AUTOFILL,
+            prompt=llm_prompt, system_prompt=SYSTEM_PROMPT_AUTOFILL
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
+    # print(
+    #     f"LLM response for /autofill: {json.dumps(llm_response, ensure_ascii=False, indent=2)}"
+    # )
+
     return llm_response
 
 
-def _extract_autofill_body(body) -> tuple[object, list[object]]:
+def _extract_autofill_body(body) -> tuple[str, dict, list[dict]]:
     """
-    extract "context" and "fields" from the request body
+    extract "prompt", "context" and "fields" from the request body
     """
-    if not isinstance(body, dict):
-        raise HTTPException(
-            status_code=400, detail="Request body must be a JSON object"
-        )
-
+    prompt = body.get("prompt", "")
     context = body.get("context")
     fields = body.get("fields")
-
-    if context is None:
+    if not isinstance(context, dict):
         raise HTTPException(
-            status_code=400, detail="context is required in the request body"
+            status_code=400, detail="context is required and must be a JSON object"
         )
-
-    if not isinstance(fields, list):
+    if not isinstance(fields, list) or not all(
+        isinstance(field, dict) for field in fields
+    ):
         raise HTTPException(
-            status_code=400, detail="fields is required and must be a list"
+            status_code=400,
+            detail="fields is required and must be a list of JSON objects",
         )
+    return prompt, context, fields
 
-    return context, fields
 
-
-def _build_autofill_prompt(context: object, fields: list[object]) -> str:
+def _build_autofill_prompt(prompt: str, context: dict, fields: list[dict]) -> str:
     """
-    builds the prompt to send to LLM
+    build a prompt for the LLM based on the input prompt, context and fields
     """
-
-    context_json = json.dumps(context, ensure_ascii=False, indent=2)
-    fields_json = json.dumps(fields, ensure_ascii=False, indent=2)
-
-    return (
-        "Resolve autofill values for the provided fields using the provided context.\n\n"
+    fields_str = json.dumps(fields, ensure_ascii=False, indent=2)
+    contextual_prompt = (
+        f"{prompt}\n\n"
         "### CONTEXT ###\n"
-        f"{context_json}\n\n"
-        "### FIELDS ###\n"
-        f"{fields_json}\n"
+        "The following information about the user and the page may be helpful for filling in the fields. "
+        "Use it to give relevant responses.\n"
+        f"{json.dumps(context, ensure_ascii=False, indent=2)}\n\n"
+        "### FIELDS TO FILL ###\n"
+        "The following is a list of fields to fill. Each field has an id, label, type, and required boolean. "
+        "Use this information to understand what each field is asking for.\n"
+        f"{fields_str}\n\n"
     )
+    return contextual_prompt

@@ -9,36 +9,116 @@ const voiceBtn = document.getElementById('voice-btn');
 const responseArea = document.getElementById('response-area');
 const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
+const gatherContextBtn = document.getElementById('gather-context-btn');
+const autofillBtn = document.getElementById('autofill-btn');
+const viewContextBtn = document.getElementById('view-context-btn');
+const clearContextBtn = document.getElementById('clear-context-btn');
+const contextView = document.getElementById('context-view');
 
-// ── Patient context ───────────────────────────────────────────
-const EXTENSION_ORIGIN = new URL(browser.runtime.getURL('')).origin;
+// Shared context manager keeps storage and host-page messaging together.
+const contextManager = new ContextManager();
 
-// Returns a Promise that resolves to the current EMR context (or null on timeout).
-// Sends REQUEST_CONTEXT to the host page and waits up to timeoutMs for a response.
-function requestContext(timeoutMs = 500) {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      window.removeEventListener('message', handler);
-      console.warn('[ClinicalAlly] Context response timed out — proceeding without patient context');
-      resolve(null);
-    }, timeoutMs);
+function renderContextView(context) {
+  if (!context) {
+    contextView.textContent = 'No context stored.';
+    return;
+  }
+  contextView.textContent = JSON.stringify(context, null, 2);
+}
 
-    function handler(event) {
-      if (event.origin !== EXTENSION_ORIGIN) return;
-      if (event.data?.type !== 'CONTEXT_RESPONSE') return;
-      clearTimeout(timer);
-      window.removeEventListener('message', handler);
-      resolve(event.data.context);
-    }
+// button loading states
+function setContextButtonsLoading(loading) {
+  gatherContextBtn.disabled = loading;
+  autofillBtn.disabled = loading;
+  clearContextBtn.disabled = loading;
+  gatherContextBtn.textContent = loading ? 'Gathering...' : 'Gather context';
+}
 
-    window.addEventListener('message', handler);
-    window.parent.postMessage({ type: 'REQUEST_CONTEXT' }, EXTENSION_ORIGIN);
-  });
+function setAutofillLoading(loading) {
+  autofillBtn.disabled = loading;
+  gatherContextBtn.disabled = loading;
+  clearContextBtn.disabled = loading;
+  autofillBtn.textContent = loading ? 'Autofilling...' : 'Autofill';
 }
 
 // Close button collapses the sidebar via postMessage to content.js
 closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
+});
+
+// ── Context controls ─────────────────────────────────────
+let contextVisible = false;
+
+viewContextBtn.addEventListener('click', async () => {
+  contextVisible = !contextVisible;
+  contextView.classList.toggle('hidden', !contextVisible);
+  viewContextBtn.textContent = contextVisible ? 'Hide context' : 'View context';
+  if (contextVisible) {
+    const storedContext = await contextManager.getStoredContext();
+    renderContextView(storedContext);
+  }
+});
+
+// Gather context button: fetch HTML, send to backend, store
+gatherContextBtn.addEventListener('click', async () => {
+  setContextButtonsLoading(true);
+  try {
+    const html = await contextManager.requestPageHtml();
+    if (!html) throw new Error('Unable to read page HTML.');
+
+    const currentContext = await contextManager.getStoredContext();
+    const resp = await fetch(`${API_URL}/process-context`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': API_KEY,
+      },
+      body: JSON.stringify({ html, context: currentContext }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+
+    const updatedContext = await resp.json();
+    await contextManager.setStoredContext(updatedContext);
+    if (contextVisible) renderContextView(updatedContext);
+  } catch (err) {
+    appendMessage(`Context error: ${err.message}`, 'error');
+  } finally {
+    setContextButtonsLoading(false);
+  }
+});
+
+// Clear shared context.
+clearContextBtn.addEventListener('click', async () => {
+  await contextManager.clearStoredContext();
+  if (contextVisible) renderContextView(null);
+});
+
+autofillBtn.addEventListener('click', async () => {
+  setAutofillLoading(true);
+
+  try {
+    const storedContext = await contextManager.getStoredContext();
+    if (!storedContext) {
+      throw new Error('No stored context found. Gather context first.');
+    }
+
+    const result = await contextManager.requestAutofill({
+      apiUrl: API_URL,
+      apiKey: API_KEY,
+      context: storedContext,
+      prompt: input.value.trim(),
+    });
+
+    appendAutofillMessage(result);
+  } catch (err) {
+    appendMessage(`Autofill error: ${err.message}`, 'error');
+  } finally {
+    setAutofillLoading(false);
+  }
 });
 
 // ── Voice recording ───────────────────────────────────────────
@@ -173,13 +253,13 @@ form.addEventListener('submit', async (e) => {
   setLoading(true);
 
   try {
-    // Fetch fresh context on every submission so the AI sees the current form state
-    const context = await requestContext();
+    // get context from storage to include in API request
+    const storedContext = await contextManager.getStoredContext();
 
-    const body = { prompt };
-    if (context && context.page_type !== 'unknown') {
-      body.context = context;
-    }
+    const body = {
+      prompt,
+      context: storedContext,
+    };
 
     // TODO Sprint 3: maintain conversation history (send prior turns to proxy)
     const resp = await fetch(`${API_URL}/generate-str`, {
@@ -339,6 +419,54 @@ function appendMessage(text, role) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
   div.textContent = text;
+  responseArea.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return div;
+}
+
+// autofill messages for demo pursepose 
+function appendAutofillMessage(result) {
+  const applied = Array.isArray(result?.applied) ? result.applied : [];
+  const skipped = Array.isArray(result?.skipped) ? result.skipped : [];
+  const div = document.createElement('div');
+  div.className = 'message assistant autofill-summary';
+
+  const title = document.createElement('div');
+  title.className = 'autofill-title';
+  title.textContent = result?.message || (
+    applied.length ? `Autofilled ${applied.length} fields.` : 'No fields were autofilled.'
+  );
+  div.appendChild(title);
+
+  if (applied.length) {
+    const list = document.createElement('ul');
+    applied.forEach((field) => {
+      const item = document.createElement('li');
+      const label = field.label || field.field_id || 'Unlabeled field';
+      const value = field.value == null || field.value === '' ? '' : `: ${field.value}`;
+      item.textContent = `${label}${value}`;
+      list.appendChild(item);
+    });
+    div.appendChild(list);
+  }
+
+  if (skipped.length) {
+    const detail = document.createElement('div');
+    detail.className = 'autofill-detail';
+    detail.textContent = 'Skipped suggestions';
+    div.appendChild(detail);
+
+    const list = document.createElement('ul');
+    skipped.forEach((field) => {
+      const item = document.createElement('li');
+      const label = field.label || field.field_id || 'Unlabeled field';
+      const reason = field.reason ? `: ${field.reason}` : '';
+      item.textContent = `${label}${reason}`;
+      list.appendChild(item);
+    });
+    div.appendChild(list);
+  }
+
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
