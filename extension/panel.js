@@ -35,8 +35,9 @@ async function initHistory() {
 }
 
 async function renderThreadList() {
-  const threads = await historyManager.listThreads();
   const state = await historyManager._load();
+  const threads = Object.values(state.threads)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
   threadList.replaceChildren();
   threads.forEach(({ id, title }) => {
     const item = document.createElement('div');
@@ -106,7 +107,7 @@ async function renderActiveThread() {
   const thread = await historyManager.getThread(state.activeThreadId);
   responseArea.replaceChildren();
   if (!thread) return;
-  thread.messages.forEach(({ role, text }) => appendMessage(text, role));
+  thread.messages.forEach(({ role, text }, i) => appendMessage(text, role, i));
 }
 
 initHistory();
@@ -121,7 +122,7 @@ drawerToggleBtn.addEventListener('click', () => {
 newChatBtn.addEventListener('click', async () => {
   await historyManager.createThread();
   await renderThreadList();
-  responseArea.replaceChildren();
+  await renderActiveThread();
 });
 
 // ── Context controls ──────────────────────────────────────────
@@ -296,7 +297,9 @@ form.addEventListener('submit', async (e) => {
   const state = await historyManager._load();
   const activeId = state.activeThreadId;
 
-  appendMessage(prompt, 'user');
+  const threadBeforeSend = await historyManager.getThread(activeId);
+  const userMsgIndex = threadBeforeSend ? threadBeforeSend.messages.length : 0;
+  appendMessage(prompt, 'user', userMsgIndex);
   await historyManager.appendMessage(activeId, 'user', prompt);
   input.value = '';
   setLoading(true);
@@ -318,7 +321,8 @@ form.addEventListener('submit', async (e) => {
       throw new Error(err.detail || `HTTP ${resp.status}`);
     }
 
-    const msgDiv = appendMessage('', 'assistant');
+    const assistantMsgIndex = userMsgIndex + 1;
+    const msgDiv = appendMessage('', 'assistant', assistantMsgIndex);
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -404,21 +408,21 @@ threadSearch.addEventListener('input', async () => {
   const matchIndices = await historyManager.searchInThread(state.activeThreadId, query);
   if (!matchIndices.length) return;
 
-  const messageDivs = Array.from(responseArea.querySelectorAll('.message.user, .message.assistant'));
   matchIndices.forEach(i => {
-    if (messageDivs[i]) messageDivs[i].classList.add('search-highlight');
+    const el = responseArea.querySelector(`[data-msg-index="${i}"]`);
+    if (el) el.classList.add('search-highlight');
   });
-  if (messageDivs[matchIndices[0]]) {
-    messageDivs[matchIndices[0]].scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+  const firstEl = responseArea.querySelector(`[data-msg-index="${matchIndices[0]}"]`);
+  if (firstEl) firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
 
 // ── DOM helpers ───────────────────────────────────────────────
 
-function appendMessage(text, role) {
+function appendMessage(text, role, msgIndex) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
   div.textContent = text;
+  if (msgIndex !== undefined) div.dataset.msgIndex = msgIndex;
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
@@ -470,4 +474,5 @@ function setLoading(loading) {
   sendBtn.disabled = loading;
   input.disabled = loading;
   spinner.classList.toggle('hidden', !loading);
+  threadList.style.pointerEvents = loading ? 'none' : '';
 }
