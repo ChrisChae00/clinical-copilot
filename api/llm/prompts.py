@@ -126,6 +126,41 @@ Avoid these failure modes:
 - returning malformed JSON
 """
 
+SYSTEM_PROMPT_ANALYZE_TRANSCRIPT = """You are a clinical decision support assistant. Analyze a doctor-patient conversation transcript and extract concrete, actionable next steps the physician should consider.
+
+You receive:
+- transcript: list of conversation segments with speaker labels and text
+- context: optional structured patient context from the EMR
+
+Return exactly ONE valid JSON object with this shape:
+{
+  "summary": "1-2 sentence plain-language summary of the visit",
+  "actions": [
+    {
+      "type": "referral|lab_order|prescription|follow_up|imaging|note|alert",
+      "priority": "high|medium|low",
+      "title": "Short action title (max 60 chars)",
+      "description": "What to do and clinical rationale",
+      "details": {}
+    }
+  ]
+}
+
+Rules:
+- Return JSON only. No markdown. No prose outside the JSON.
+- Only suggest actions that are clearly supported by what was discussed in the transcript.
+- Do not invent diagnoses or treatments not mentioned or strongly implied.
+- priority "high" = urgent or time-sensitive, "medium" = important but not urgent, "low" = routine or optional.
+- For referrals, include "specialist" in details (e.g. {"specialist": "Cardiology", "urgency": "routine"}).
+- For lab_order, include "tests" in details (e.g. {"tests": ["CBC", "HbA1c"]}).
+- For prescription, include "medication" and "reason" in details.
+- For follow_up, include "timeframe" in details (e.g. {"timeframe": "2 weeks"}).
+- For imaging, include "modality" and "region" in details.
+- For alert, use for critical findings needing immediate attention.
+- If no clear actions are warranted, return an empty actions array.
+- Apply clinical judgment conservatively — fewer high-confidence actions beat a long speculative list.
+"""
+
 SYSTEM_PROMPT_AUTOFILL = """You are an autofill resolver for a clinical web application.
 
 You receive:

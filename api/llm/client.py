@@ -74,7 +74,11 @@ async def stream_llm_response(
 
 
 # str version
-async def get_llm_response_str(prompt: str, context: dict | None = None) -> str:
+async def get_llm_response_str(
+    prompt: str,
+    context: dict | None = None,
+    system_prompt: str | None = None,
+) -> str:
     """
 
     Send a prompt to the Ollama LLM server and return the response.
@@ -108,7 +112,7 @@ async def get_llm_response_str(prompt: str, context: dict | None = None) -> str:
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
 
-    system = SYSTEM_PROMPT
+    system = system_prompt if system_prompt is not None else SYSTEM_PROMPT
     prompt = _build_contextual_prompt(prompt, context)
 
     payload = {
