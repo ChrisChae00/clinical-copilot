@@ -9,49 +9,75 @@
 <body>
   <div id="panel">
     <header id="panel-header">
-      <span id="panel-title">Clinical Ally</span>
-      <button id="close-btn" aria-label="Close sidebar" title="Close">✕</button>
+      <div id="header-left">
+        <button id="drawer-toggle-btn" aria-label="Toggle chat history" title="Chat history">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+        <span id="panel-title">Clinical Ally</span>
+      </div>
+      <div id="header-right">
+        <button id="new-chat-btn" aria-label="New chat" title="New chat">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+        <button id="close-btn" aria-label="Close sidebar" title="Close">&#x2715;</button>
+      </div>
     </header>
 
-    <main id="panel-body">
-      <div id="context-controls" aria-label="Context controls">
-        <button id="gather-context-btn" type="button">Gather context</button>
-        <button id="autofill-btn" type="button">Autofill (DEMO)</button>
-        <button id="view-context-btn" type="button">View context</button>
-        <button id="clear-context-btn" type="button">Clear context</button>
-      </div>
-      <pre id="context-view" class="context-view hidden" aria-label="Stored context"></pre>
-      <div id="response-area" aria-live="polite" aria-label="AI responses"></div>
-      <div id="spinner" class="spinner hidden" aria-label="Loading"></div>
-    </main>
+    <div id="panel-layout">
+      <aside id="thread-drawer" class="hidden" aria-label="Chat history">
+        <div id="thread-list" role="list"></div>
+      </aside>
 
-    <footer id="panel-footer">
-      <form id="prompt-form" autocomplete="off">
-        <div class="input-wrapper">
-          <input
-            id="prompt-input"
-            type="text"
-            placeholder="Ask a clinical question…"
-            aria-label="Clinical question"
-            autocomplete="off"
-            spellcheck="true"
-          />
-          <button
-            id="voice-btn"
-            type="button"
-            aria-label="Record voice input"
-            title="Record voice input"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-            </svg>
-          </button>
-        </div>
-        <button id="send-btn" type="submit" aria-label="Send">Send</button>
-      </form>
-    </footer>
+      <div id="panel-main">
+        <main id="panel-body">
+          <div id="context-controls" aria-label="Context controls">
+            <button id="gather-context-btn" type="button">Gather context</button>
+            <button id="autofill-btn" type="button">Autofill (DEMO)</button>
+            <button id="view-context-btn" type="button">View context</button>
+            <button id="clear-context-btn" type="button">Clear context</button>
+          </div>
+          <pre id="context-view" class="context-view hidden" aria-label="Stored context"></pre>
+          <div id="response-area" aria-live="polite" aria-label="AI responses"></div>
+          <div id="spinner" class="spinner hidden" aria-label="Loading"></div>
+        </main>
+
+        <footer id="panel-footer">
+          <div id="thread-search-bar" class="hidden">
+            <input id="thread-search" type="search" placeholder="Search in this chat&#x2026;" aria-label="Search messages" />
+          </div>
+          <form id="prompt-form" autocomplete="off">
+            <div class="input-wrapper">
+              <input
+                id="prompt-input"
+                type="text"
+                placeholder="Ask a clinical question&#x2026;"
+                aria-label="Clinical question"
+                autocomplete="off"
+                spellcheck="true"
+              />
+              <button
+                id="voice-btn"
+                type="button"
+                aria-label="Record voice input"
+                title="Record voice input"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                </svg>
+              </button>
+            </div>
+            <button id="send-btn" type="submit" aria-label="Send">Send</button>
+          </form>
+        </footer>
+      </div>
+    </div>
   </div>
   <script src="context-manager.js"></script>
+  <script src="history-manager.js"></script>
   <script src="panel.js"></script>
 </body>
 </html>
