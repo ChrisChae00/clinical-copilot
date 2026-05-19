@@ -283,6 +283,7 @@ function appendTranscript(segments) {
     line.appendChild(document.createTextNode(text));
     container.appendChild(line);
   });
+  // Transcripts are display-only and not persisted to thread history (by design).
   responseArea.appendChild(container);
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
@@ -296,6 +297,7 @@ form.addEventListener('submit', async (e) => {
 
   const state = await historyManager._load();
   const activeId = state.activeThreadId;
+  if (!activeId) return;
 
   const threadBeforeSend = await historyManager.getThread(activeId);
   const userMsgIndex = threadBeforeSend ? threadBeforeSend.messages.length : 0;
