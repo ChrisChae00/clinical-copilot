@@ -3,3 +3,8 @@ uvicorn
 httpx
 pydantic
 python-dotenv
+python-multipart
+whisperx
+torch
+torchaudio
+beautifulsoup4

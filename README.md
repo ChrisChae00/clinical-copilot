@@ -18,12 +18,29 @@ Browser Extension → FastAPI (:8000) → Ollama (:11434)
 | Python | 3.10+ | For the proxy server |
 | Ollama | latest | Runs granite4 locally |
 | OSCAR EMR | any | Running at `localhost:8080/oscar/` |
+| HuggingFace account | — | Required for speaker diarization (free) |
 
 ---
 
 ## Quick Start
 
-### 1 — Start the API server
+### 1 — Configure environment variables
+
+Create a `.env` file in the project root:
+
+```bash
+HF_TOKEN=hf_your_token_here
+```
+
+To get a HuggingFace token:
+1. Create a free account at `huggingface.co`
+2. Accept model access at `huggingface.co/pyannote/speaker-diarization-community-1`
+3. Accept model access at `huggingface.co/pyannote/segmentation-3.0`
+4. Create a **Read** token at `huggingface.co/settings/tokens`
+
+> Without `HF_TOKEN`, voice transcription still works but speaker labels are disabled (all segments show as `SPEAKER_00`).
+
+### 2 — Start the API server
 
 The API server runs in Docker and includes Ollama.
 
@@ -45,7 +62,9 @@ docker compose exec ollama ollama pull granite4
 
 Verify: `curl -s http://localhost:8000/docs` should open the FastAPI docs.
 
-### 2 — Load the extension in Firefox
+> **First voice transcription** will download whisperX and pyannote models (~1–2 GB total). Subsequent requests use the cached `whisperx_models` Docker volume.
+
+### 3 — Load the extension in Firefox
 
 Firefox does not allow installing unsigned extensions permanently in standard mode.
 During development, use **Temporary Add-on** loading — the extension stays active until Firefox restarts.
@@ -68,13 +87,14 @@ During development, use **Temporary Add-on** loading — the extension stays act
 - Click **Inspect** next to Clinical Ally in `about:debugging` to open its DevTools console.
 - Any errors from `content.js`, `panel.js`, or failed network requests appear here.
 
-### 3 — Use Clinical Ally
+### 4 — Use Clinical Ally
 
 1. Navigate to your OSCAR EMR instance (e.g. `http://localhost:8080/oscar/`)
 2. The Clinical Ally sidebar appears as a tab on the right edge of the page.
 3. Click it to expand the panel (360 px wide).
 4. Type a clinical question in the input field and press **Send** or hit Enter.
 5. The AI response appears in the response area within the panel.
+6. Click the **mic icon** to record audio — click again to stop. The transcript appears with speaker labels (`SPEAKER_00`, `SPEAKER_01`).
 
 > **Sidebar not appearing?** Make sure the URL matches `localhost:8080/oscar/`. The content script only runs on pages matching the manifest's `matches` patterns. See [Testing Without OSCAR EMR](#testing-without-oscar-emr) below.
 
@@ -174,7 +194,8 @@ clinical-copilot/
 │   │   ├── health.py           GET /health
 │   │   ├── generate_str.py     POST /generate-str — returns plain text response
 │   │   ├── generate_json.py    POST /generate-json — returns JSON response
-│   │   └── process_context.py  POST /process-context (WIP) — merges DOM + context
+│   │   ├── process_context.py  POST /process-context (WIP) — merges DOM + context
+│   │   └── transcribe.py       POST /transcribe — whisperX transcription + speaker diarization
 │   ├── llm/
 │   │   ├── client.py           Ollama API client
 │   │   └── prompts.py          System prompts
@@ -204,7 +225,8 @@ clinical-copilot/
 
 | Sprint | Goal |
 |---|---|
-| Sprint 1 (current) | End-to-end scaffold: sidebar → proxy → Ollama |
-| Sprint 2 | Patient context extraction, streaming, closed shadow DOM |
-| Sprint 3 | Conversation history, voice input, configurable model |
+| Sprint 1 ✓ | End-to-end scaffold: sidebar → proxy → Ollama |
+| Sprint 2 ✓ | Patient context extraction (all major OSCAR pages) |
+| Sprint 3 ✓ | Voice input with speaker diarization (whisperX + pyannote) |
+| Sprint 3 remaining | Streaming responses, conversation history, model switcher |
 | Sprint 4 | PHIPA audit log, packaging, deployment guide |

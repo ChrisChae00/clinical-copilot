@@ -3,10 +3,74 @@ Client that interfaces with the LLM (Ollama)
 """
 
 import json
+from typing import AsyncGenerator
 
 import httpx
 from config import MAX_CONTEXT_LEN, MODEL_NAME, OLLAMA_URL
 from llm.prompts import SYSTEM_PROMPT
+
+
+def _build_contextual_prompt(prompt: str, context: dict | None = None) -> str:
+    """
+    Append structured context directly to the user message so the model can
+    consider it alongside the original prompt.
+    """
+
+    if context is None:
+        return prompt
+
+    context_str = json.dumps(context, ensure_ascii=False, indent=2)
+    return (
+        f"{prompt}\n\n"
+        "### CURRENT PATIENT CONTEXT ###\n"
+        "The following information was extracted from the current EMR page. "
+        "Use it to give context-aware, relevant responses.\n"
+        f"{context_str}"
+    )
+
+
+async def stream_llm_response(
+    prompt: str, context: dict | None = None
+) -> AsyncGenerator[str, None]:
+    """
+    Stream tokens from Ollama as server-sent events.
+    Yields SSE-formatted strings: `data: <token>\n\n`
+    """
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError("prompt must be a non-empty string")
+
+    system = SYSTEM_PROMPT
+    prompt = _build_contextual_prompt(prompt, context)
+
+    payload = {
+        "model": MODEL_NAME,
+        "system": system,
+        "prompt": prompt,
+        "stream": True,
+        "options": {"num_ctx": MAX_CONTEXT_LEN},
+    }
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        async with client.stream(
+            "POST", f"{OLLAMA_URL}/api/generate", json=payload
+        ) as response:
+            if response.status_code != 200:
+                raise RuntimeError(
+                    f"Ollama returned status code {response.status_code}"
+                )
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                try:
+                    chunk = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                token = chunk.get("response", "")
+                if token:
+                    yield f"data: {json.dumps(token)}\n\n"
+                if chunk.get("done"):
+                    yield "data: [DONE]\n\n"
+                    return
 
 
 # str version
@@ -45,15 +109,7 @@ async def get_llm_response_str(prompt: str, context: dict | None = None) -> str:
         raise ValueError("prompt must be a non-empty string")
 
     system = SYSTEM_PROMPT
-    if context:
-        context_str = json.dumps(context, ensure_ascii=False, indent=2)
-        system = (
-            f"{SYSTEM_PROMPT}\n\n"
-            "### CURRENT PATIENT CONTEXT ###\n"
-            "The following information was extracted from the current EMR page. "
-            "Use it to give context-aware, relevant responses.\n"
-            f"{context_str}"
-        )
+    prompt = _build_contextual_prompt(prompt, context)
 
     payload = {
         "model": MODEL_NAME,
@@ -83,7 +139,9 @@ async def get_llm_response_str(prompt: str, context: dict | None = None) -> str:
 
 # json version
 async def get_llm_response_json(
-    prompt: str, system_prompt: str = SYSTEM_PROMPT
+    prompt: str,
+    system_prompt: str = SYSTEM_PROMPT,
+    context: dict | None = None,
 ) -> dict:
     """
     Calls the /api/generate endpoint of in Ollama in json mode so it always return a json
@@ -101,6 +159,8 @@ async def get_llm_response_json(
     """
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
+
+    prompt = _build_contextual_prompt(prompt, context)
 
     payload = {
         "model": MODEL_NAME,

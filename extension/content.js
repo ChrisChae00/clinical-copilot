@@ -8,6 +8,225 @@
   if (document.getElementById('clinical-ally-host')) return;
 
   // ── OSCAR context extraction ──────────────────────────────────
+
+  const _val   = (id) => document.getElementById(id)?.value?.trim() || '';
+  const _selOpt = (el) => el ? (el.options[el.selectedIndex]?.text || '').trim() : '';
+
+  // Extracts patient header + demographic_no present on most OSCAR pages
+  function _extractCommon(ctx) {
+    const header = document.querySelector('.TopStatusBar h2');
+    if (header) ctx.patient_header = header.textContent.trim();
+    const demoNo = _val('demographicNo');
+    if (demoNo) ctx.demographic_no = demoNo;
+  }
+
+  function _extractConsultationRequest(ctx) {
+    ctx.page_type = 'consultation_request';
+    _extractCommon(ctx);
+
+    const labelMap = {
+      'Patient':         'patient_name',
+      'Birthdate':       'patient_dob',
+      'Sex':             'patient_sex',
+      'Health Card No.': 'patient_hcn',
+      'Tel.No.':         'patient_phone',
+      'Cell No.':        'patient_cell',
+    };
+    document.querySelectorAll('tr').forEach((row) => {
+      const labelEl = row.querySelector('td.tite4');
+      const valueEl = row.querySelector('td.tite1');
+      if (!labelEl || !valueEl) return;
+      const key = labelMap[labelEl.textContent.trim()];
+      if (key) {
+        const link = valueEl.querySelector('a');
+        ctx[key] = (link || valueEl).textContent.trim();
+      }
+    });
+
+    const textareaFields = [
+      ['currentMedications',  'current_medications'],
+      ['allergies',           'allergies'],
+      ['clinicalInformation', 'clinical_information'],
+      ['concurrentProblems',  'concurrent_problems'],
+    ];
+    textareaFields.forEach(([id, key]) => {
+      const v = _val(id);
+      if (v) ctx[key] = v;
+    });
+
+    const form = document.getElementById('EctConsultationFormRequest2Form');
+    const rfc = form.querySelector('textarea[name="reasonForConsultation"]');
+    if (rfc?.value?.trim()) ctx.reason_for_consultation = rfc.value.trim();
+
+    ctx.referring_practitioner = _selOpt(form.querySelector('select[name="providerNo"]'));
+    ctx.service    = _selOpt(document.getElementById('service'));
+    ctx.specialist = _selOpt(document.getElementById('specialist'));
+    ctx.urgency    = _selOpt(document.getElementById('urgency'));
+
+    const referalDate = _val('referalDate');
+    if (referalDate) ctx.referral_date = referalDate;
+  }
+
+  function _extractEncounter(ctx) {
+    ctx.page_type = 'encounter';
+    _extractCommon(ctx);
+
+    // Encounter note — OSCAR uses a textarea or rich editor
+    const noteEl = document.getElementById('note') ||
+                   document.querySelector('textarea[name="note"]') ||
+                   document.querySelector('.noteEditor textarea') ||
+                   document.querySelector('#noteContainer textarea');
+    if (noteEl?.value?.trim()) ctx.encounter_note = noteEl.value.trim();
+
+    // SOAP fields (some OSCAR versions split the note)
+    const soapFields = [
+      ['subjectiveText',  'subjective'],
+      ['objectiveText',   'objective'],
+      ['assessmentText',  'assessment'],
+      ['planText',        'plan'],
+    ];
+    soapFields.forEach(([id, key]) => {
+      const v = _val(id);
+      if (v) ctx[key] = v;
+    });
+
+    // Problem list — table rows with diagnosis codes/descriptions
+    const problems = [];
+    document.querySelectorAll('.problem-list tr, #problemList tr, table.problem tr').forEach((row) => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length >= 2) {
+        const desc = cells[0].textContent.trim() || cells[1].textContent.trim();
+        if (desc) problems.push(desc);
+      }
+    });
+    if (problems.length) ctx.problem_list = problems;
+
+    // Reason for visit
+    const reasonEl = document.querySelector('input[name="reason"], #reason, input[name="appointmentReason"]');
+    if (reasonEl?.value?.trim()) ctx.reason_for_visit = reasonEl.value.trim();
+  }
+
+  function _extractDemographic(ctx) {
+    ctx.page_type = 'demographic';
+
+    const textFields = [
+      ['lastName',    'last_name'],
+      ['firstName',   'first_name'],
+      ['address',     'address'],
+      ['city',        'city'],
+      ['province',    'province'],
+      ['postal',      'postal_code'],
+      ['phone',       'phone'],
+      ['phone2',      'phone2'],
+      ['email',       'email'],
+      ['hin',         'health_card_no'],
+      ['ver',         'health_card_version'],
+    ];
+    textFields.forEach(([name, key]) => {
+      const el = document.querySelector(`input[name="${name}"], #${name}`);
+      if (el?.value?.trim()) ctx[key] = el.value.trim();
+    });
+
+    const dob = _val('dobYear') && _val('dobMonth') && _val('dobDay')
+      ? `${_val('dobYear')}-${_val('dobMonth').padStart(2,'0')}-${_val('dobDay').padStart(2,'0')}`
+      : '';
+    if (dob) ctx.date_of_birth = dob;
+
+    const sex = document.querySelector('select[name="sex"], #sex');
+    if (sex) ctx.sex = _selOpt(sex);
+
+    const hcType = document.querySelector('select[name="hcType"], #hcType');
+    if (hcType) ctx.health_card_province = _selOpt(hcType);
+  }
+
+  function _extractLabResults(ctx) {
+    ctx.page_type = 'lab_results';
+    _extractCommon(ctx);
+
+    const labs = [];
+    // Skip the first row of each table to avoid picking up column headers
+    document.querySelectorAll('table').forEach((table) => {
+      Array.from(table.querySelectorAll('tr')).slice(1).forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 3) return;
+        const name  = cells[0].textContent.trim();
+        const value = cells[1].textContent.trim();
+        const range = cells[2]?.textContent?.trim() || '';
+        if (name && value && name.length < 60) {
+          labs.push(range ? `${name}: ${value} (ref: ${range})` : `${name}: ${value}`);
+        }
+      });
+    });
+    if (labs.length) ctx.lab_results = labs;
+
+    // Collection date shown in header or caption
+    const dateEl = document.querySelector('.labDate, td.labDate, caption, .reportDate');
+    if (dateEl) ctx.collection_date = dateEl.textContent.trim();
+  }
+
+  function _extractPrescriptions(ctx) {
+    ctx.page_type = 'prescription';
+    _extractCommon(ctx);
+
+    const rxList = [];
+    // Skip the first row of each table to avoid picking up column headers
+    document.querySelectorAll('table').forEach((table) => {
+      Array.from(table.querySelectorAll('tr')).slice(1).forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 2) {
+          const drug = cells[0].textContent.trim();
+          const dose = cells[1]?.textContent?.trim() || '';
+          if (drug && drug.length < 80) rxList.push(dose ? `${drug} — ${dose}` : drug);
+        }
+      });
+    });
+    document.querySelectorAll('.drugList li').forEach((li) => {
+      const text = li.textContent.trim();
+      if (text && text.length < 80) rxList.push(text);
+    });
+    if (rxList.length) ctx.prescriptions = rxList;
+  }
+
+  function _extractScheduler(ctx) {
+    ctx.page_type = 'scheduler';
+
+    // Extract appointments visible in current day view
+    const appts = [];
+    document.querySelectorAll('td.appt, .appointment, tr[class*="appt"]').forEach((appt) => {
+      const time    = appt.querySelector('.apptTime, td:first-child')?.textContent?.trim() || '';
+      const patient = appt.querySelector('.patientName, a[href*="demographic"]')?.textContent?.trim() || '';
+      const reason  = appt.querySelector('.apptReason, .reason')?.textContent?.trim() || '';
+      if (patient) appts.push([time, patient, reason].filter(Boolean).join(' — '));
+    });
+    if (appts.length) ctx.appointments = appts;
+
+    // Date being viewed
+    const url = new URL(window.location.href);
+    const y = url.searchParams.get('year');
+    const m = url.searchParams.get('month');
+    const d = url.searchParams.get('day');
+    if (y && m && d) ctx.schedule_date = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+
+  function _extractPreventiveCare(ctx) {
+    ctx.page_type = 'preventive_care';
+    _extractCommon(ctx);
+
+    const items = [];
+    // Skip the first row of each table to avoid picking up column headers
+    document.querySelectorAll('table').forEach((table) => {
+      Array.from(table.querySelectorAll('tr')).slice(1).forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 2) {
+          const item = cells[0].textContent.trim();
+          const status = cells[1].textContent.trim();
+          if (item && status && item.length < 80) items.push(`${item}: ${status}`);
+        }
+      });
+    });
+    if (items.length) ctx.preventive_care_items = items;
+  }
+
   function extractOSCARContext() {
     const ctx = {
       page_url: window.location.href,
@@ -15,64 +234,26 @@
       page_type: 'unknown',
     };
 
+    const url = window.location.href;
+
     try {
-      // ── Consultation Request page ──────────────────────────────
       if (document.getElementById('EctConsultationFormRequest2Form')) {
-        ctx.page_type = 'consultation_request';
-
-        // Patient header (e.g. "Smith, John M 45")
-        const header = document.querySelector('.TopStatusBar h2');
-        if (header) ctx.patient_header = header.textContent.trim();
-
-        // Demographics from label→value table rows
-        const labelMap = {
-          'Patient':         'patient_name',
-          'Birthdate':       'patient_dob',
-          'Sex':             'patient_sex',
-          'Health Card No.': 'patient_hcn',
-          'Tel.No.':         'patient_phone',
-          'Cell No.':        'patient_cell',
-        };
-        document.querySelectorAll('tr').forEach((row) => {
-          const labelEl = row.querySelector('td.tite4');
-          const valueEl = row.querySelector('td.tite1');
-          if (!labelEl || !valueEl) return;
-          const key = labelMap[labelEl.textContent.trim()];
-          if (key) {
-            // prefer link text for patient name
-            const link = valueEl.querySelector('a');
-            ctx[key] = (link || valueEl).textContent.trim();
-          }
-        });
-
-        // Clinical textareas (only include if non-empty)
-        const textareaFields = [
-          ['currentMedications',    'current_medications'],
-          ['allergies',             'allergies'],
-          ['clinicalInformation',   'clinical_information'],
-          ['concurrentProblems',    'concurrent_problems'],
-        ];
-        textareaFields.forEach(([id, key]) => {
-          const el = document.getElementById(id);
-          if (el && el.value.trim()) ctx[key] = el.value.trim();
-        });
-
-        const form = document.getElementById('EctConsultationFormRequest2Form');
-        const rfcEl = form.querySelector('textarea[name="reasonForConsultation"]');
-        if (rfcEl && rfcEl.value.trim()) ctx.reason_for_consultation = rfcEl.value.trim();
-
-        // Consultation dropdowns
-        const getSelected = (el) => el ? (el.options[el.selectedIndex]?.text || '').trim() : '';
-        ctx.referring_practitioner = getSelected(form.querySelector('select[name="providerNo"]'));
-        ctx.service    = getSelected(document.getElementById('service'));
-        ctx.specialist = getSelected(document.getElementById('specialist'));
-        ctx.urgency    = getSelected(document.getElementById('urgency'));
-
-        const referalDate = document.getElementById('referalDate');
-        if (referalDate && referalDate.value) ctx.referral_date = referalDate.value;
-
-        const demoNo = document.getElementById('demographicNo');
-        if (demoNo) ctx.demographic_no = demoNo.value;
+        _extractConsultationRequest(ctx);
+      } else if (url.includes('/casemgmt/') || url.includes('caseManagement')) {
+        _extractEncounter(ctx);
+      } else if (url.includes('/demographic/demographiccontrol') || url.includes('addDemographic')) {
+        _extractDemographic(ctx);
+      } else if (url.includes('/lab/') || url.includes('labReport') || url.includes('LabReport')) {
+        _extractLabResults(ctx);
+      } else if (url.includes('/oscarRx/') || url.includes('RxPreview') || new URL(url).pathname.includes('/prescription')) {
+        _extractPrescriptions(ctx);
+      } else if (url.includes('providercontrol') || url.includes('provider/scheduler')) {
+        _extractScheduler(ctx);
+      } else if (url.includes('/oscarPrevention/') || url.includes('Prevention')) {
+        _extractPreventiveCare(ctx);
+      } else {
+        // Generic fallback — extract patient header if present on any OSCAR page
+        _extractCommon(ctx);
       }
     } catch (err) {
       console.error('[ClinicalAlly] extractOSCARContext failed:', err);
@@ -182,6 +363,7 @@
     display: 'none',
   });
   iframe.setAttribute('title', 'Clinical Ally sidebar');
+  iframe.setAttribute('allow', 'microphone');
   shadow.appendChild(iframe);
 
   // ── Collapse / expand ─────────────────────────────────────────
@@ -222,6 +404,44 @@
         { type: 'CONTEXT_RESPONSE', context },
         browser.runtime.getURL('')  // restrict to extension origin, not wildcard
       );
+    } else if (event.data.type === 'REQUEST_PAGE_HTML') {
+      const html = document.documentElement?.outerHTML || '';
+      iframe.contentWindow.postMessage(
+        { type: 'PAGE_HTML_RESPONSE', html },
+        browser.runtime.getURL('')
+      );
+    } else if (event.data.type === 'REQUEST_AUTOFILL') {
+      if (!window.ClinicalAllyAutofiller) {
+        iframe.contentWindow.postMessage(
+          { type: 'AUTOFILL_RESPONSE', ok: false, error: 'Autofiller is unavailable.' },
+          browser.runtime.getURL('')
+        );
+        return;
+      }
+
+      const runAutofill = async () => {
+        const autofiller = new window.ClinicalAllyAutofiller({
+          apiUrl: event.data.apiUrl,
+          apiKey: event.data.apiKey,
+          context: event.data.context || {},
+          prompt: event.data.prompt || '',
+        });
+        return autofiller.autofill();
+      };
+
+      runAutofill()
+        .then((result) => {
+          iframe.contentWindow.postMessage(
+            { type: 'AUTOFILL_RESPONSE', ok: true, result },
+            browser.runtime.getURL('')
+          );
+        })
+        .catch((err) => {
+          iframe.contentWindow.postMessage(
+            { type: 'AUTOFILL_RESPONSE', ok: false, error: err.message },
+            browser.runtime.getURL('')
+          );
+        });
     }
   });
 })();

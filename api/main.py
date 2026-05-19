@@ -15,10 +15,12 @@ X-API-Key: api-key-placeholder
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from routes.autofill import router as autofill_router
 from routes.generate_json import router as generate_json_router
 from routes.generate_str import router as generate_str_router
 from routes.health import router as health_router
 from routes.process_context import router as process_context_router
+from routes.transcribe import router as transcribe_router
 
 app = FastAPI(title="Ally API")
 
@@ -37,3 +39,5 @@ app.include_router(health_router)
 app.include_router(generate_str_router)
 app.include_router(generate_json_router)
 app.include_router(process_context_router)
+app.include_router(autofill_router)
+app.include_router(transcribe_router)
