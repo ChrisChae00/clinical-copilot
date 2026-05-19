@@ -19,7 +19,10 @@
 window.HistoryManager = class HistoryManager {
   constructor(storageKey = 'clinicalAllyChatHistory') {
     this.storageKey = storageKey;
-    this.storage = browser.storage.local;
+    this.storage = browser.storage?.local;
+    if (!this.storage) {
+      throw new Error('Extension storage is unavailable. Chat history cannot be persisted.');
+    }
   }
 
   async _load() {
@@ -75,6 +78,7 @@ window.HistoryManager = class HistoryManager {
 
   async setActive(id) {
     const state = await this._load();
+    if (!state.threads[id]) throw new Error(`Thread not found: ${id}`);
     state.activeThreadId = id;
     await this._save(state);
   }
@@ -124,8 +128,6 @@ window.HistoryManager = class HistoryManager {
       await this._save(state);
     } else {
       // No threads left — create a fresh one
-      await this._save(state);
-      // createThread will load current state and save again
       const newId = this._newId();
       const now = Date.now();
       state.threads[newId] = {

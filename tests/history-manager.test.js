@@ -208,6 +208,18 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
     assertEqual(result, null, 'getThread should return null for unknown id');
   });
 
+  // 12. setActive throws for unknown id
+  await test('setActive throws for unknown id', async () => {
+    const hm2 = new HistoryManager();
+    let threw = false;
+    try {
+      await hm2.setActive('t_nonexistent');
+    } catch (e) {
+      threw = true;
+    }
+    assert(threw, 'setActive should throw for unknown id');
+  });
+
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log(`\n${passed} passed, ${failed} failed\n`);
   if (failed > 0) process.exit(1);
