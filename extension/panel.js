@@ -26,10 +26,7 @@ const historyManager = new HistoryManager();
 // ── Boot ──────────────────────────────────────────────────────
 
 async function initHistory() {
-  const state = await historyManager._load();
-  if (!state.activeThreadId || !state.threads[state.activeThreadId]) {
-    await historyManager.createThread();
-  }
+  await historyManager.createThread();
   await renderThreadList();
   await renderActiveThread();
 }
