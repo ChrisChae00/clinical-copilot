@@ -1,4 +1,3 @@
-// TODO: make proxy URL configurable (env var or extension settings page)
 const API_URL = 'http://localhost:8000';
 const API_KEY = 'api-key-placeholder';
 
@@ -14,9 +13,118 @@ const autofillBtn = document.getElementById('autofill-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
+const drawerToggleBtn = document.getElementById('drawer-toggle-btn');
+const newChatBtn = document.getElementById('new-chat-btn');
+const threadDrawer = document.getElementById('thread-drawer');
+const threadList = document.getElementById('thread-list');
+const threadSearchBar = document.getElementById('thread-search-bar');
+const threadSearch = document.getElementById('thread-search');
 
-// Shared context manager keeps storage and host-page messaging together.
 const contextManager = new ContextManager();
+const historyManager = new HistoryManager();
+
+// ── Boot ──────────────────────────────────────────────────────
+
+async function initHistory() {
+  const state = await historyManager._load();
+  if (!state.activeThreadId || !state.threads[state.activeThreadId]) {
+    await historyManager.createThread();
+  }
+  await renderThreadList();
+  await renderActiveThread();
+}
+
+async function renderThreadList() {
+  const threads = await historyManager.listThreads();
+  const state = await historyManager._load();
+  threadList.replaceChildren();
+  threads.forEach(({ id, title }) => {
+    const item = document.createElement('div');
+    item.className = `thread-item${id === state.activeThreadId ? ' active' : ''}`;
+    item.dataset.id = id;
+    item.setAttribute('role', 'listitem');
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'thread-item-title';
+    titleSpan.textContent = title;
+    titleSpan.title = title;
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'thread-delete-btn';
+    delBtn.textContent = '\xd7';
+    delBtn.setAttribute('aria-label', `Delete ${title}`);
+    delBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await historyManager.deleteThread(id);
+      await renderThreadList();
+      await renderActiveThread();
+    });
+
+    item.appendChild(titleSpan);
+    item.appendChild(delBtn);
+
+    item.addEventListener('click', async () => {
+      await historyManager.setActive(id);
+      await renderThreadList();
+      await renderActiveThread();
+    });
+
+    titleSpan.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      titleSpan.contentEditable = 'true';
+      titleSpan.focus();
+      const range = document.createRange();
+      range.selectNodeContents(titleSpan);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+    });
+
+    titleSpan.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); titleSpan.blur(); }
+      if (e.key === 'Escape') {
+        titleSpan.contentEditable = 'false';
+        titleSpan.textContent = title;
+      }
+    });
+
+    titleSpan.addEventListener('blur', async () => {
+      if (titleSpan.contentEditable !== 'true') return;
+      titleSpan.contentEditable = 'false';
+      const newTitle = titleSpan.textContent.trim();
+      if (newTitle && newTitle !== title) {
+        await historyManager.renameThread(id, newTitle);
+        await renderThreadList();
+      }
+    });
+
+    threadList.appendChild(item);
+  });
+}
+
+async function renderActiveThread() {
+  const state = await historyManager._load();
+  const thread = await historyManager.getThread(state.activeThreadId);
+  responseArea.replaceChildren();
+  if (!thread) return;
+  thread.messages.forEach(({ role, text }) => appendMessage(text, role));
+}
+
+initHistory();
+
+// ── Header controls ───────────────────────────────────────────
+
+drawerToggleBtn.addEventListener('click', () => {
+  const isHidden = threadDrawer.classList.toggle('hidden');
+  threadSearchBar.classList.toggle('hidden', isHidden);
+});
+
+newChatBtn.addEventListener('click', async () => {
+  await historyManager.createThread();
+  await renderThreadList();
+  responseArea.replaceChildren();
+});
+
+// ── Context controls ──────────────────────────────────────────
 
 function renderContextView(context) {
   if (!context) {
@@ -26,7 +134,6 @@ function renderContextView(context) {
   contextView.textContent = JSON.stringify(context, null, 2);
 }
 
-// button loading states
 function setContextButtonsLoading(loading) {
   gatherContextBtn.disabled = loading;
   autofillBtn.disabled = loading;
@@ -41,12 +148,10 @@ function setAutofillLoading(loading) {
   autofillBtn.textContent = loading ? 'Autofilling...' : 'Autofill';
 }
 
-// Close button collapses the sidebar via postMessage to content.js
 closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
 });
 
-// ── Context controls ─────────────────────────────────────
 let contextVisible = false;
 
 viewContextBtn.addEventListener('click', async () => {
@@ -59,28 +164,21 @@ viewContextBtn.addEventListener('click', async () => {
   }
 });
 
-// Gather context button: fetch HTML, send to backend, store
 gatherContextBtn.addEventListener('click', async () => {
   setContextButtonsLoading(true);
   try {
     const html = await contextManager.requestPageHtml();
     if (!html) throw new Error('Unable to read page HTML.');
-
     const currentContext = await contextManager.getStoredContext();
     const resp = await fetch(`${API_URL}/process-context`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': API_KEY,
-      },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ html, context: currentContext }),
     });
-
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
       throw new Error(err.detail || `HTTP ${resp.status}`);
     }
-
     const updatedContext = await resp.json();
     await contextManager.setStoredContext(updatedContext);
     if (contextVisible) renderContextView(updatedContext);
@@ -91,7 +189,6 @@ gatherContextBtn.addEventListener('click', async () => {
   }
 });
 
-// Clear shared context.
 clearContextBtn.addEventListener('click', async () => {
   await contextManager.clearStoredContext();
   if (contextVisible) renderContextView(null);
@@ -99,20 +196,15 @@ clearContextBtn.addEventListener('click', async () => {
 
 autofillBtn.addEventListener('click', async () => {
   setAutofillLoading(true);
-
   try {
     const storedContext = await contextManager.getStoredContext();
-    if (!storedContext) {
-      throw new Error('No stored context found. Gather context first.');
-    }
-
+    if (!storedContext) throw new Error('No stored context found. Gather context first.');
     const result = await contextManager.requestAutofill({
       apiUrl: API_URL,
       apiKey: API_KEY,
       context: storedContext,
       prompt: input.value.trim(),
     });
-
     appendAutofillMessage(result);
   } catch (err) {
     appendMessage(`Autofill error: ${err.message}`, 'error');
@@ -122,16 +214,13 @@ autofillBtn.addEventListener('click', async () => {
 });
 
 // ── Voice recording ───────────────────────────────────────────
+
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
 
 voiceBtn.addEventListener('click', async () => {
-  if (isRecording) {
-    mediaRecorder.stop();
-    return;
-  }
-
+  if (isRecording) { mediaRecorder.stop(); return; }
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -139,15 +228,10 @@ voiceBtn.addEventListener('click', async () => {
     appendMessage('Microphone access denied.', 'error');
     return;
   }
-
   audioChunks = [];
   const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
   mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-
-  mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) audioChunks.push(e.data);
-  };
-
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
   mediaRecorder.onstop = async () => {
     stream.getTracks().forEach((t) => t.stop());
     voiceBtn.classList.remove('recording');
@@ -155,7 +239,6 @@ voiceBtn.addEventListener('click', async () => {
     const blob = new Blob(audioChunks, mimeType ? { type: mimeType } : {});
     await sendAudioForTranscription(blob);
   };
-
   mediaRecorder.start();
   isRecording = true;
   voiceBtn.classList.add('recording');
@@ -164,22 +247,18 @@ voiceBtn.addEventListener('click', async () => {
 async function sendAudioForTranscription(blob) {
   setLoading(true);
   voiceBtn.disabled = true;
-
   try {
     const formData = new FormData();
     formData.append('audio', blob, 'recording.webm');
-
     const resp = await fetch(`${API_URL}/transcribe`, {
       method: 'POST',
       headers: { 'X-API-Key': API_KEY },
       body: formData,
     });
-
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
       throw new Error(err.detail || `HTTP ${resp.status}`);
     }
-
     const { segments } = await resp.json();
     appendTranscript(segments);
   } catch (err) {
@@ -193,7 +272,6 @@ async function sendAudioForTranscription(blob) {
 function appendTranscript(segments) {
   const container = document.createElement('div');
   container.className = 'message transcript';
-
   segments.forEach(({ speaker, text }) => {
     const line = document.createElement('div');
     line.className = 'transcript-line';
@@ -204,42 +282,35 @@ function appendTranscript(segments) {
     line.appendChild(document.createTextNode(text));
     container.appendChild(line);
   });
-
   responseArea.appendChild(container);
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
+// ── Chat form ─────────────────────────────────────────────────
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-
   const prompt = input.value.trim();
   if (!prompt) return;
 
-  // Display user message
-  appendMessage(prompt, 'user');
-  input.value = '';
+  const state = await historyManager._load();
+  const activeId = state.activeThreadId;
 
-  // Loading state
+  appendMessage(prompt, 'user');
+  await historyManager.appendMessage(activeId, 'user', prompt);
+  input.value = '';
   setLoading(true);
 
   try {
-    // get context from storage to include in API request
     const storedContext = await contextManager.getStoredContext();
-
-    const body = {
-      prompt,
-      context: storedContext,
-    };
-
-    // TODO Sprint 3: maintain conversation history (send prior turns to proxy)
     const resp = await fetch(`${API_URL}/generate-str`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': API_KEY,
-        'Accept': 'text/event-stream'
+        'Accept': 'text/event-stream',
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ prompt, context: storedContext }),
     });
 
     if (!resp.ok) {
@@ -252,52 +323,97 @@ form.addEventListener('submit', async (e) => {
     const decoder = new TextDecoder();
     let buffer = '';
     let streamDone = false;
+    let assistantText = '';
 
     setLoading(false);
 
     while (!streamDone) {
       const { done, value } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete last line
-
+      buffer = lines.pop();
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const payload = line.slice(6).trim();
-        if (payload === '[DONE]') {
-          streamDone = true;
-          break;
-        }
+        if (payload === '[DONE]') { streamDone = true; break; }
         try {
           const token = JSON.parse(payload);
           msgDiv.textContent += token;
+          assistantText += token;
           msgDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        } catch {
-          // malformed chunk — skip
-        }
+        } catch { /* malformed chunk */ }
       }
     }
 
-    // flush any token remaining in buffer if stream ended without a trailing newline
     if (buffer.startsWith('data: ')) {
       const payload = buffer.slice(6).trim();
       if (payload && payload !== '[DONE]') {
         try {
-          msgDiv.textContent += JSON.parse(payload);
-        } catch {
-          // malformed chunk — skip
-        }
+          const token = JSON.parse(payload);
+          msgDiv.textContent += token;
+          assistantText += token;
+        } catch { /* malformed chunk */ }
       }
     }
     reader.cancel();
+
+    if (assistantText) {
+      await historyManager.appendMessage(activeId, 'assistant', assistantText);
+      await autoTitleIfNeeded(activeId, prompt, assistantText);
+    }
   } catch (err) {
     appendMessage(`Error: ${err.message}`, 'error');
   } finally {
     setLoading(false);
   }
 });
+
+async function autoTitleIfNeeded(threadId, userPrompt, assistantText) {
+  const thread = await historyManager.getThread(threadId);
+  if (!thread || thread.title !== 'New chat') return;
+  try {
+    const summaryPrompt =
+      'Summarize this exchange in 6 words or fewer as a chat title. No punctuation.\n' +
+      `User: ${userPrompt.slice(0, 200)}\nAssistant: ${assistantText.slice(0, 200)}`;
+    const resp = await fetch(`${API_URL}/generate-str`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({ prompt: summaryPrompt }),
+    });
+    if (!resp.ok) return;
+    const raw = await resp.json();
+    const title = String(raw).trim().replace(/^["']|["']$/g, '').slice(0, 60);
+    if (title) {
+      await historyManager.renameThread(threadId, title);
+      await renderThreadList();
+    }
+  } catch (e) {
+    console.warn('[ClinicalAlly] thread title generation failed:', e.message);
+  }
+}
+
+// ── Thread search ─────────────────────────────────────────────
+
+threadSearch.addEventListener('input', async () => {
+  const query = threadSearch.value.trim();
+  responseArea.querySelectorAll('.message').forEach(el => el.classList.remove('search-highlight'));
+  if (!query) return;
+
+  const state = await historyManager._load();
+  const matchIndices = await historyManager.searchInThread(state.activeThreadId, query);
+  if (!matchIndices.length) return;
+
+  const messageDivs = Array.from(responseArea.querySelectorAll('.message.user, .message.assistant'));
+  matchIndices.forEach(i => {
+    if (messageDivs[i]) messageDivs[i].classList.add('search-highlight');
+  });
+  if (messageDivs[matchIndices[0]]) {
+    messageDivs[matchIndices[0]].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+
+// ── DOM helpers ───────────────────────────────────────────────
 
 function appendMessage(text, role) {
   const div = document.createElement('div');
@@ -308,20 +424,17 @@ function appendMessage(text, role) {
   return div;
 }
 
-// autofill messages for demo pursepose 
 function appendAutofillMessage(result) {
   const applied = Array.isArray(result?.applied) ? result.applied : [];
   const skipped = Array.isArray(result?.skipped) ? result.skipped : [];
   const div = document.createElement('div');
   div.className = 'message assistant autofill-summary';
-
   const title = document.createElement('div');
   title.className = 'autofill-title';
   title.textContent = result?.message || (
     applied.length ? `Autofilled ${applied.length} fields.` : 'No fields were autofilled.'
   );
   div.appendChild(title);
-
   if (applied.length) {
     const list = document.createElement('ul');
     applied.forEach((field) => {
@@ -333,13 +446,11 @@ function appendAutofillMessage(result) {
     });
     div.appendChild(list);
   }
-
   if (skipped.length) {
     const detail = document.createElement('div');
     detail.className = 'autofill-detail';
     detail.textContent = 'Skipped suggestions';
     div.appendChild(detail);
-
     const list = document.createElement('ul');
     skipped.forEach((field) => {
       const item = document.createElement('li');
@@ -350,7 +461,6 @@ function appendAutofillMessage(result) {
     });
     div.appendChild(list);
   }
-
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
