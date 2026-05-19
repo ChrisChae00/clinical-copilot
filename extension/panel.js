@@ -450,150 +450,151 @@ threadSearch.addEventListener('input', async () => {
 // ── DOM helpers ───────────────────────────────────────────────
 
 function appendMessage(text, role, msgIndex) {
-const ACTION_TYPE_LABELS = {
-  referral: 'Referral',
-  lab_order: 'Lab Order',
-  prescription: 'Prescription',
-  follow_up: 'Follow-Up',
-  imaging: 'Imaging',
-  note: 'Note',
-  alert: 'Alert',
-};
+  const ACTION_TYPE_LABELS = {
+    referral: 'Referral',
+    lab_order: 'Lab Order',
+    prescription: 'Prescription',
+    follow_up: 'Follow-Up',
+    imaging: 'Imaging',
+    note: 'Note',
+    alert: 'Alert',
+  };
 
-const PRIORITY_LABELS = { high: 'Urgent', medium: 'Important', low: 'Routine' };
+  const PRIORITY_LABELS = { high: 'Urgent', medium: 'Important', low: 'Routine' };
 
-function appendClinicalActions(summary, actions) {
-  const container = document.createElement('div');
-  container.className = 'message clinical-actions';
+  function appendClinicalActions(summary, actions) {
+    const container = document.createElement('div');
+    container.className = 'message clinical-actions';
 
-  const header = document.createElement('div');
-  header.className = 'actions-header';
-  header.textContent = 'Suggested Clinical Actions';
-  container.appendChild(header);
+    const header = document.createElement('div');
+    header.className = 'actions-header';
+    header.textContent = 'Suggested Clinical Actions';
+    container.appendChild(header);
 
-  if (summary) {
-    const summaryEl = document.createElement('p');
-    summaryEl.className = 'actions-summary';
-    summaryEl.textContent = summary;
-    container.appendChild(summaryEl);
+    if (summary) {
+      const summaryEl = document.createElement('p');
+      summaryEl.className = 'actions-summary';
+      summaryEl.textContent = summary;
+      container.appendChild(summaryEl);
+    }
+
+    if (actions.length === 0) {
+      const none = document.createElement('p');
+      none.className = 'actions-empty';
+      none.textContent = 'No specific actions identified.';
+      container.appendChild(none);
+    } else {
+      actions.forEach((action) => {
+        const card = document.createElement('div');
+        card.className = `action-card priority-${action.priority || 'low'}`;
+
+        const cardHeader = document.createElement('div');
+        cardHeader.className = 'action-card-header';
+
+        const badge = document.createElement('span');
+        badge.className = `action-badge priority-${action.priority || 'low'}`;
+        badge.textContent = PRIORITY_LABELS[action.priority] || action.priority;
+
+        const type = document.createElement('span');
+        type.className = 'action-type';
+        type.textContent = ACTION_TYPE_LABELS[action.type] || action.type;
+
+        cardHeader.appendChild(badge);
+        cardHeader.appendChild(type);
+        card.appendChild(cardHeader);
+
+        const title = document.createElement('div');
+        title.className = 'action-title';
+        title.textContent = action.title;
+        card.appendChild(title);
+
+        if (action.description) {
+          const desc = document.createElement('div');
+          desc.className = 'action-description';
+          desc.textContent = action.description;
+          card.appendChild(desc);
+        }
+
+        if (action.details && Object.keys(action.details).length > 0) {
+          const detailsList = document.createElement('div');
+          detailsList.className = 'action-details';
+          Object.entries(action.details).forEach(([k, v]) => {
+            const item = document.createElement('span');
+            item.className = 'action-detail-item';
+            const val = Array.isArray(v) ? v.join(', ') : v;
+            item.textContent = `${k}: ${val}`;
+            detailsList.appendChild(item);
+          });
+          card.appendChild(detailsList);
+        }
+
+        container.appendChild(card);
+      });
+    }
+
+    responseArea.appendChild(container);
+    container.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }
 
-  if (actions.length === 0) {
-    const none = document.createElement('p');
-    none.className = 'actions-empty';
-    none.textContent = 'No specific actions identified.';
-    container.appendChild(none);
-  } else {
-    actions.forEach((action) => {
-      const card = document.createElement('div');
-      card.className = `action-card priority-${action.priority || 'low'}`;
-
-      const cardHeader = document.createElement('div');
-      cardHeader.className = 'action-card-header';
-
-      const badge = document.createElement('span');
-      badge.className = `action-badge priority-${action.priority || 'low'}`;
-      badge.textContent = PRIORITY_LABELS[action.priority] || action.priority;
-
-      const type = document.createElement('span');
-      type.className = 'action-type';
-      type.textContent = ACTION_TYPE_LABELS[action.type] || action.type;
-
-      cardHeader.appendChild(badge);
-      cardHeader.appendChild(type);
-      card.appendChild(cardHeader);
-
-      const title = document.createElement('div');
-      title.className = 'action-title';
-      title.textContent = action.title;
-      card.appendChild(title);
-
-      if (action.description) {
-        const desc = document.createElement('div');
-        desc.className = 'action-description';
-        desc.textContent = action.description;
-        card.appendChild(desc);
-      }
-
-      if (action.details && Object.keys(action.details).length > 0) {
-        const detailsList = document.createElement('div');
-        detailsList.className = 'action-details';
-        Object.entries(action.details).forEach(([k, v]) => {
-          const item = document.createElement('span');
-          item.className = 'action-detail-item';
-          const val = Array.isArray(v) ? v.join(', ') : v;
-          item.textContent = `${k}: ${val}`;
-          detailsList.appendChild(item);
-        });
-        card.appendChild(detailsList);
-      }
-
-      container.appendChild(card);
-    });
+  function appendMessage(text, role) {
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+    div.textContent = text;
+    if (msgIndex !== undefined) div.dataset.msgIndex = msgIndex;
+    responseArea.appendChild(div);
+    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    return div;
   }
 
-  responseArea.appendChild(container);
-  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-}
-
-function appendMessage(text, role) {
-  const div = document.createElement('div');
-  div.className = `message ${role}`;
-  div.textContent = text;
-  if (msgIndex !== undefined) div.dataset.msgIndex = msgIndex;
-  responseArea.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  return div;
-}
-
-function appendAutofillMessage(result) {
-  const applied = Array.isArray(result?.applied) ? result.applied : [];
-  const skipped = Array.isArray(result?.skipped) ? result.skipped : [];
-  const div = document.createElement('div');
-  div.className = 'message assistant autofill-summary';
-  const title = document.createElement('div');
-  title.className = 'autofill-title';
-  title.textContent = result?.message || (
-    applied.length ? `Autofilled ${applied.length} fields.` : 'No fields were autofilled.'
-  );
-  div.appendChild(title);
-  if (applied.length) {
-    const list = document.createElement('ul');
-    applied.forEach((field) => {
-      const item = document.createElement('li');
-      const label = field.label || field.field_id || 'Unlabeled field';
-      const value = field.value == null || field.value === '' ? '' : `: ${field.value}`;
-      item.textContent = `${label}${value}`;
-      list.appendChild(item);
-    });
-    div.appendChild(list);
+  function appendAutofillMessage(result) {
+    const applied = Array.isArray(result?.applied) ? result.applied : [];
+    const skipped = Array.isArray(result?.skipped) ? result.skipped : [];
+    const div = document.createElement('div');
+    div.className = 'message assistant autofill-summary';
+    const title = document.createElement('div');
+    title.className = 'autofill-title';
+    title.textContent = result?.message || (
+      applied.length ? `Autofilled ${applied.length} fields.` : 'No fields were autofilled.'
+    );
+    div.appendChild(title);
+    if (applied.length) {
+      const list = document.createElement('ul');
+      applied.forEach((field) => {
+        const item = document.createElement('li');
+        const label = field.label || field.field_id || 'Unlabeled field';
+        const value = field.value == null || field.value === '' ? '' : `: ${field.value}`;
+        item.textContent = `${label}${value}`;
+        list.appendChild(item);
+      });
+      div.appendChild(list);
+    }
+    if (skipped.length) {
+      const detail = document.createElement('div');
+      detail.className = 'autofill-detail';
+      detail.textContent = 'Skipped suggestions';
+      div.appendChild(detail);
+      const list = document.createElement('ul');
+      skipped.forEach((field) => {
+        const item = document.createElement('li');
+        const label = field.label || field.field_id || 'Unlabeled field';
+        const reason = field.reason ? `: ${field.reason}` : '';
+        item.textContent = `${label}${reason}`;
+        list.appendChild(item);
+      });
+      div.appendChild(list);
+    }
+    responseArea.appendChild(div);
+    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    return div;
   }
-  if (skipped.length) {
-    const detail = document.createElement('div');
-    detail.className = 'autofill-detail';
-    detail.textContent = 'Skipped suggestions';
-    div.appendChild(detail);
-    const list = document.createElement('ul');
-    skipped.forEach((field) => {
-      const item = document.createElement('li');
-      const label = field.label || field.field_id || 'Unlabeled field';
-      const reason = field.reason ? `: ${field.reason}` : '';
-      item.textContent = `${label}${reason}`;
-      list.appendChild(item);
-    });
-    div.appendChild(list);
+
+  function setLoading(loading) {
+    sendBtn.disabled = loading;
+    input.disabled = loading;
+    spinner.classList.toggle('hidden', !loading);
   }
-  responseArea.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  return div;
-}
 
-function setLoading(loading) {
-  sendBtn.disabled = loading;
-  input.disabled = loading;
-  spinner.classList.toggle('hidden', !loading);
-}
-
-function setThreadLock(locked) {
-  threadList.style.pointerEvents = locked ? 'none' : '';
+  function setThreadLock(locked) {
+    threadList.style.pointerEvents = locked ? 'none' : '';
+  }
 }
