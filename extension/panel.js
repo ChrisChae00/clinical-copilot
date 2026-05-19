@@ -303,6 +303,7 @@ form.addEventListener('submit', async (e) => {
   await historyManager.appendMessage(activeId, 'user', prompt);
   input.value = '';
   setLoading(true);
+  setThreadLock(true);
 
   try {
     const storedContext = await contextManager.getStoredContext();
@@ -370,6 +371,7 @@ form.addEventListener('submit', async (e) => {
     appendMessage(`Error: ${err.message}`, 'error');
   } finally {
     setLoading(false);
+    setThreadLock(false);
   }
 });
 
@@ -474,5 +476,8 @@ function setLoading(loading) {
   sendBtn.disabled = loading;
   input.disabled = loading;
   spinner.classList.toggle('hidden', !loading);
-  threadList.style.pointerEvents = loading ? 'none' : '';
+}
+
+function setThreadLock(locked) {
+  threadList.style.pointerEvents = locked ? 'none' : '';
 }
