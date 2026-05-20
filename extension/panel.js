@@ -273,9 +273,9 @@ async function analyzeTranscript(segments) {
   analyzingDiv.classList.add('analyzing');
 
   try {
-    const context = await requestContext();
+    const context = await contextManager.getStoredContext();
     const body = { segments };
-    if (context && context.page_type !== 'unknown') body.context = context;
+    if (context) body.context = context;
 
     const resp = await fetch(`${API_URL}/analyze-transcript`, {
       method: 'POST',
@@ -501,6 +501,24 @@ function appendAutofillMessage(result) {
   return div;
 }
 
+const DISMISS_REASONS = [
+  'Not useful',
+  'Irrelevant to this patient',
+  'Already done',
+  'Duplicate recommendation',
+  'Other',
+];
+
+const DRAFT_BTN_LABELS = {
+  referral: 'Draft Referral',
+  lab_order: 'Draft Lab Order',
+  prescription: 'Draft Prescription',
+  follow_up: 'Draft Follow-Up Note',
+  imaging: 'Draft Imaging Order',
+  note: 'Draft Note',
+  alert: 'Draft Alert',
+};
+
 function appendClinicalActions(summary, actions) {
   const ACTION_TYPE_LABELS = {
     referral: 'Referral',
@@ -577,6 +595,123 @@ function appendClinicalActions(summary, actions) {
         });
         card.appendChild(detailsList);
       }
+
+      // Draft area (hidden until generated)
+      const draftArea = document.createElement('div');
+      draftArea.className = 'action-draft hidden';
+
+      const draftText = document.createElement('textarea');
+      draftText.className = 'action-draft-text';
+      draftText.readOnly = true;
+      draftText.rows = 6;
+      draftArea.appendChild(draftText);
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'action-copy-btn';
+      copyBtn.textContent = 'Copy';
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(draftText.value).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+        });
+      });
+      draftArea.appendChild(copyBtn);
+      card.appendChild(draftArea);
+
+      // Dismiss reason area (hidden until dismiss clicked)
+      const dismissArea = document.createElement('div');
+      dismissArea.className = 'action-dismiss-area hidden';
+
+      const dismissLabel = document.createElement('span');
+      dismissLabel.className = 'action-dismiss-label';
+      dismissLabel.textContent = 'Why are you dismissing this?';
+      dismissArea.appendChild(dismissLabel);
+
+      const dismissSelect = document.createElement('select');
+      dismissSelect.className = 'action-dismiss-select';
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = 'Select a reason…';
+      dismissSelect.appendChild(defaultOpt);
+      DISMISS_REASONS.forEach((reason) => {
+        const opt = document.createElement('option');
+        opt.value = reason;
+        opt.textContent = reason;
+        dismissSelect.appendChild(opt);
+      });
+      dismissArea.appendChild(dismissSelect);
+
+      const dismissBtns = document.createElement('div');
+      dismissBtns.className = 'action-dismiss-btns';
+
+      const confirmDismissBtn = document.createElement('button');
+      confirmDismissBtn.className = 'action-confirm-dismiss-btn';
+      confirmDismissBtn.textContent = 'Confirm';
+      confirmDismissBtn.addEventListener('click', () => {
+        if (!dismissSelect.value) return;
+        card.classList.add('dismissed');
+        buttonsRow.remove();
+        dismissArea.remove();
+      });
+      dismissBtns.appendChild(confirmDismissBtn);
+
+      const cancelDismissBtn = document.createElement('button');
+      cancelDismissBtn.className = 'action-cancel-dismiss-btn';
+      cancelDismissBtn.textContent = 'Cancel';
+      cancelDismissBtn.addEventListener('click', () => {
+        dismissArea.classList.add('hidden');
+        buttonsRow.classList.remove('hidden');
+      });
+      dismissBtns.appendChild(cancelDismissBtn);
+      dismissArea.appendChild(dismissBtns);
+      card.appendChild(dismissArea);
+
+      // Action buttons row
+      const buttonsRow = document.createElement('div');
+      buttonsRow.className = 'action-buttons';
+
+      const draftBtn = document.createElement('button');
+      draftBtn.className = 'action-draft-btn';
+      draftBtn.textContent = DRAFT_BTN_LABELS[action.type] || 'Draft';
+      draftBtn.addEventListener('click', async () => {
+        draftBtn.disabled = true;
+        draftBtn.textContent = 'Generating…';
+        draftArea.classList.add('hidden');
+        try {
+          const storedContext = await contextManager.getStoredContext();
+          const resp = await fetch(`${API_URL}/draft-action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+            body: JSON.stringify({ action, context: storedContext }),
+          });
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
+            throw new Error(err.detail || `HTTP ${resp.status}`);
+          }
+          const { draft } = await resp.json();
+          draftText.value = draft;
+          draftArea.classList.remove('hidden');
+          draftBtn.textContent = 'Regenerate';
+        } catch (err) {
+          draftText.value = `Error generating draft: ${err.message}`;
+          draftArea.classList.remove('hidden');
+          draftBtn.textContent = DRAFT_BTN_LABELS[action.type] || 'Draft';
+        } finally {
+          draftBtn.disabled = false;
+        }
+      });
+
+      const dismissBtn = document.createElement('button');
+      dismissBtn.className = 'action-dismiss-btn';
+      dismissBtn.textContent = 'Dismiss';
+      dismissBtn.addEventListener('click', () => {
+        buttonsRow.classList.add('hidden');
+        dismissArea.classList.remove('hidden');
+      });
+
+      buttonsRow.appendChild(draftBtn);
+      buttonsRow.appendChild(dismissBtn);
+      card.appendChild(buttonsRow);
 
       container.appendChild(card);
     });
