@@ -15,6 +15,7 @@ const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
 const drawerToggleBtn = document.getElementById('drawer-toggle-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
+const exportChatBtn = document.getElementById('export-chat-btn');
 const threadDrawer = document.getElementById('thread-drawer');
 const threadList = document.getElementById('thread-list');
 const threadSearchBar = document.getElementById('thread-search-bar');
@@ -26,9 +27,18 @@ const historyManager = new HistoryManager();
 // ── Boot ──────────────────────────────────────────────────────
 
 async function initHistory() {
-  await historyManager.createThread();
   await renderThreadList();
   await renderActiveThread();
+}
+
+async function ensureActiveThread() {
+  const state = await historyManager._load();
+  if (state.activeThreadId && state.threads[state.activeThreadId]) {
+    return state.activeThreadId;
+  }
+  const id = await historyManager.createThread();
+  await renderThreadList();
+  return id;
 }
 
 async function renderThreadList() {
@@ -104,7 +114,26 @@ async function renderActiveThread() {
   const thread = await historyManager.getThread(state.activeThreadId);
   responseArea.replaceChildren();
   if (!thread) return;
-  thread.messages.forEach(({ role, text }, i) => appendMessage(text, role, i));
+  thread.messages.forEach(({ role, text }, i) => {
+    if (role === 'transcript') {
+      try { appendTranscript(JSON.parse(text)); } catch { appendMessage(text, 'transcript', i); }
+    } else if (role === 'clinical-actions') {
+      try {
+        const { summary, actions, dismissed = [] } = JSON.parse(text);
+        const msgIndex = i;
+        const threadId = state.activeThreadId;
+        appendClinicalActions(summary, actions, new Set(dismissed), async (actionIdx) => {
+          const t = await historyManager.getThread(threadId);
+          if (!t) return;
+          const data = JSON.parse(t.messages[msgIndex].text);
+          data.dismissed = [...new Set([...(data.dismissed || []), actionIdx])];
+          await historyManager.updateMessage(threadId, msgIndex, JSON.stringify(data));
+        });
+      } catch { appendMessage(text, 'assistant', i); }
+    } else {
+      appendMessage(text, role, i);
+    }
+  });
 }
 
 initHistory();
@@ -120,6 +149,51 @@ newChatBtn.addEventListener('click', async () => {
   await historyManager.createThread();
   await renderThreadList();
   await renderActiveThread();
+});
+
+exportChatBtn.addEventListener('click', async () => {
+  const state = await historyManager._load();
+  const thread = await historyManager.getThread(state.activeThreadId);
+  if (!thread || thread.messages.length === 0) {
+    appendMessage('Nothing to export — this chat is empty.', 'error');
+    return;
+  }
+
+  const date = new Date(thread.createdAt).toISOString().slice(0, 10);
+  const lines = [`Clinical Ally — ${thread.title}`, `Exported: ${new Date().toLocaleString()}`, ''];
+
+  thread.messages.forEach(({ role, text, ts }) => {
+    const time = new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (role === 'transcript') {
+      lines.push(`[${time}] TRANSCRIPT:`);
+      try {
+        JSON.parse(text).forEach(({ speaker, text: t }) => lines.push(`  ${speaker}: ${t}`));
+      } catch { lines.push(text); }
+    } else if (role === 'clinical-actions') {
+      lines.push(`[${time}] CLINICAL ACTIONS:`);
+      try {
+        const { summary, actions } = JSON.parse(text);
+        if (summary) lines.push(`  Summary: ${summary}`);
+        actions.forEach((a, i) => {
+          lines.push(`  ${i + 1}. [${(a.priority || 'low').toUpperCase()}] ${a.type} — ${a.title}`);
+          if (a.description) lines.push(`     ${a.description}`);
+        });
+      } catch { lines.push(text); }
+    } else {
+      const label = role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : role.toUpperCase();
+      lines.push(`[${time}] ${label}:`);
+      lines.push(text);
+    }
+    lines.push('');
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `clinical-ally-${date}-${thread.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 });
 
 // ── Context controls ──────────────────────────────────────────
@@ -259,6 +333,8 @@ async function sendAudioForTranscription(blob) {
     }
     const { segments } = await resp.json();
     appendTranscript(segments);
+    const activeId = await ensureActiveThread();
+    await historyManager.appendMessage(activeId, 'transcript', JSON.stringify(segments));
     analyzeTranscript(segments);
   } catch (err) {
     appendMessage(`Transcription error: ${err.message}`, 'error');
@@ -290,7 +366,17 @@ async function analyzeTranscript(segments) {
 
     const { summary, actions } = await resp.json();
     analyzingDiv.remove();
-    appendClinicalActions(summary, actions || []);
+    const activeId = await ensureActiveThread();
+    const thread = await historyManager.getThread(activeId);
+    const msgIndex = thread ? thread.messages.length : 0;
+    await historyManager.appendMessage(activeId, 'clinical-actions', JSON.stringify({ summary, actions: actions || [], dismissed: [] }));
+    appendClinicalActions(summary, actions || [], new Set(), async (actionIdx) => {
+      const t = await historyManager.getThread(activeId);
+      if (!t) return;
+      const data = JSON.parse(t.messages[msgIndex].text);
+      data.dismissed = [...new Set([...(data.dismissed || []), actionIdx])];
+      await historyManager.updateMessage(activeId, msgIndex, JSON.stringify(data));
+    });
   } catch (err) {
     analyzingDiv.textContent = `Analysis error: ${err.message}`;
     analyzingDiv.className = 'message error';
@@ -310,9 +396,9 @@ function appendTranscript(segments) {
     line.appendChild(document.createTextNode(text));
     container.appendChild(line);
   });
-  // Transcripts are display-only and not persisted to thread history (by design).
   responseArea.appendChild(container);
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return container;
 }
 
 // ── Chat form ─────────────────────────────────────────────────
@@ -322,9 +408,7 @@ form.addEventListener('submit', async (e) => {
   const prompt = input.value.trim();
   if (!prompt) return;
 
-  const state = await historyManager._load();
-  const activeId = state.activeThreadId;
-  if (!activeId) return;
+  const activeId = await ensureActiveThread();
 
   const threadBeforeSend = await historyManager.getThread(activeId);
   const userMsgIndex = threadBeforeSend ? threadBeforeSend.messages.length : 0;
@@ -519,7 +603,7 @@ const DRAFT_BTN_LABELS = {
   alert: 'Draft Alert',
 };
 
-function appendClinicalActions(summary, actions) {
+function appendClinicalActions(summary, actions, dismissed = new Set(), onDismiss = null) {
   const ACTION_TYPE_LABELS = {
     referral: 'Referral',
     lab_order: 'Lab Order',
@@ -552,9 +636,10 @@ function appendClinicalActions(summary, actions) {
     none.textContent = 'No specific actions identified.';
     container.appendChild(none);
   } else {
-    actions.forEach((action) => {
+    actions.forEach((action, actionIdx) => {
       const card = document.createElement('div');
       card.className = `action-card priority-${action.priority || 'low'}`;
+      if (dismissed.has(actionIdx)) card.classList.add('dismissed');
 
       const cardHeader = document.createElement('div');
       cardHeader.className = 'action-card-header';
@@ -647,11 +732,12 @@ function appendClinicalActions(summary, actions) {
       const confirmDismissBtn = document.createElement('button');
       confirmDismissBtn.className = 'action-confirm-dismiss-btn';
       confirmDismissBtn.textContent = 'Confirm';
-      confirmDismissBtn.addEventListener('click', () => {
+      confirmDismissBtn.addEventListener('click', async () => {
         if (!dismissSelect.value) return;
         card.classList.add('dismissed');
         buttonsRow.remove();
         dismissArea.remove();
+        if (onDismiss) await onDismiss(actionIdx);
       });
       dismissBtns.appendChild(confirmDismissBtn);
 
@@ -711,7 +797,8 @@ function appendClinicalActions(summary, actions) {
 
       buttonsRow.appendChild(draftBtn);
       buttonsRow.appendChild(dismissBtn);
-      card.appendChild(buttonsRow);
+      if (dismissed.has(actionIdx)) buttonsRow.remove();
+      else card.appendChild(buttonsRow);
 
       container.appendChild(card);
     });

@@ -26,11 +26,10 @@ Response:
 """
 
 import json
-import re
 
 from auth import require_api_key
 from fastapi import APIRouter, Depends, HTTPException, Request
-from llm.client import get_llm_response_str
+from llm.client import get_llm_response_json
 from llm.prompts import SYSTEM_PROMPT_ANALYZE_TRANSCRIPT
 
 router = APIRouter()
@@ -55,7 +54,7 @@ async def analyze_transcript(request: Request):
     prompt = _build_prompt(segments, context)
 
     try:
-        raw = await get_llm_response_str(
+        result = await get_llm_response_json(
             prompt=prompt,
             system_prompt=SYSTEM_PROMPT_ANALYZE_TRANSCRIPT,
         )
@@ -64,28 +63,7 @@ async def analyze_transcript(request: Request):
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
-    result = _extract_json(raw)
-    if result is None:
-        raise HTTPException(status_code=502, detail=f"LLM did not return valid JSON. Raw: {raw!r}")
-
     return result
-
-
-def _extract_json(text: str) -> dict | None:
-    """Extract first JSON object from LLM text output, tolerating surrounding prose."""
-    # Try direct parse first
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-    # Find first {...} block
-    match = re.search(r'\{.*\}', text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            pass
-    return None
 
 
 def _build_prompt(segments: list, context: object) -> str:
