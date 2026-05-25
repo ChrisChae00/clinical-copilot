@@ -611,6 +611,15 @@ body {
   border-color: #d1d5db;
 }
 
+.action-dismiss-reason {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+  margin-top: 6px;
+}
+
+.action-dismiss-reason.hidden { display: none; }
+
 .action-cancel-dismiss-btn:hover { background: #f3f4f6; }
 
 /* Dismissed card state */

@@ -119,14 +119,17 @@ async function renderActiveThread() {
       try { appendTranscript(JSON.parse(text)); } catch { appendMessage(text, 'transcript', i); }
     } else if (role === 'clinical-actions') {
       try {
-        const { summary, actions, dismissed = [] } = JSON.parse(text);
+        const { summary, actions, dismissed = {} } = JSON.parse(text);
+        const dismissedObj = Array.isArray(dismissed)
+          ? Object.fromEntries(dismissed.map(i => [i, '']))
+          : dismissed;
         const msgIndex = i;
         const threadId = state.activeThreadId;
-        appendClinicalActions(summary, actions, new Set(dismissed), async (actionIdx) => {
+        appendClinicalActions(summary, actions, dismissedObj, async (actionIdx, reason) => {
           const t = await historyManager.getThread(threadId);
           if (!t) return;
           const data = JSON.parse(t.messages[msgIndex].text);
-          data.dismissed = [...new Set([...(data.dismissed || []), actionIdx])];
+          data.dismissed = { ...(data.dismissed || {}), [actionIdx]: reason };
           await historyManager.updateMessage(threadId, msgIndex, JSON.stringify(data));
         });
       } catch { appendMessage(text, 'assistant', i); }
@@ -172,10 +175,16 @@ exportChatBtn.addEventListener('click', async () => {
     } else if (role === 'clinical-actions') {
       lines.push(`[${time}] CLINICAL ACTIONS:`);
       try {
-        const { summary, actions } = JSON.parse(text);
+        const { summary, actions, dismissed = {} } = JSON.parse(text);
+        const dismissedMap = Array.isArray(dismissed)
+          ? Object.fromEntries(dismissed.map(i => [i, '']))
+          : dismissed;
         if (summary) lines.push(`  Summary: ${summary}`);
         actions.forEach((a, i) => {
-          lines.push(`  ${i + 1}. [${(a.priority || 'low').toUpperCase()}] ${a.type} — ${a.title}`);
+          const wasDismissed = i in dismissedMap;
+          const reason = dismissedMap[i];
+          const tag = wasDismissed ? ` [DISMISSED${reason ? `: ${reason}` : ''}]` : '';
+          lines.push(`  ${i + 1}. [${(a.priority || 'low').toUpperCase()}] ${a.type} — ${a.title}${tag}`);
           if (a.description) lines.push(`     ${a.description}`);
         });
       } catch { lines.push(text); }
@@ -369,12 +378,12 @@ async function analyzeTranscript(segments) {
     const activeId = await ensureActiveThread();
     const thread = await historyManager.getThread(activeId);
     const msgIndex = thread ? thread.messages.length : 0;
-    await historyManager.appendMessage(activeId, 'clinical-actions', JSON.stringify({ summary, actions: actions || [], dismissed: [] }));
-    appendClinicalActions(summary, actions || [], new Set(), async (actionIdx) => {
+    await historyManager.appendMessage(activeId, 'clinical-actions', JSON.stringify({ summary, actions: actions || [], dismissed: {} }));
+    appendClinicalActions(summary, actions || [], {}, async (actionIdx, reason) => {
       const t = await historyManager.getThread(activeId);
       if (!t) return;
       const data = JSON.parse(t.messages[msgIndex].text);
-      data.dismissed = [...new Set([...(data.dismissed || []), actionIdx])];
+      data.dismissed = { ...(data.dismissed || {}), [actionIdx]: reason };
       await historyManager.updateMessage(activeId, msgIndex, JSON.stringify(data));
     });
   } catch (err) {
@@ -603,7 +612,7 @@ const DRAFT_BTN_LABELS = {
   alert: 'Draft Alert',
 };
 
-function appendClinicalActions(summary, actions, dismissed = new Set(), onDismiss = null) {
+function appendClinicalActions(summary, actions, dismissed = {}, onDismiss = null) {
   const ACTION_TYPE_LABELS = {
     referral: 'Referral',
     lab_order: 'Lab Order',
@@ -639,7 +648,8 @@ function appendClinicalActions(summary, actions, dismissed = new Set(), onDismis
     actions.forEach((action, actionIdx) => {
       const card = document.createElement('div');
       card.className = `action-card priority-${action.priority || 'low'}`;
-      if (dismissed.has(actionIdx)) card.classList.add('dismissed');
+      const isDismissed = actionIdx in dismissed;
+      if (isDismissed) card.classList.add('dismissed');
 
       const cardHeader = document.createElement('div');
       cardHeader.className = 'action-card-header';
@@ -734,10 +744,13 @@ function appendClinicalActions(summary, actions, dismissed = new Set(), onDismis
       confirmDismissBtn.textContent = 'Confirm';
       confirmDismissBtn.addEventListener('click', async () => {
         if (!dismissSelect.value) return;
+        const reason = dismissSelect.value;
         card.classList.add('dismissed');
         buttonsRow.remove();
         dismissArea.remove();
-        if (onDismiss) await onDismiss(actionIdx);
+        dismissReasonEl.textContent = `Dismissed: ${reason}`;
+        dismissReasonEl.classList.remove('hidden');
+        if (onDismiss) await onDismiss(actionIdx, reason);
       });
       dismissBtns.appendChild(confirmDismissBtn);
 
@@ -751,6 +764,14 @@ function appendClinicalActions(summary, actions, dismissed = new Set(), onDismis
       dismissBtns.appendChild(cancelDismissBtn);
       dismissArea.appendChild(dismissBtns);
       card.appendChild(dismissArea);
+
+      const dismissReasonEl = document.createElement('div');
+      dismissReasonEl.className = 'action-dismiss-reason hidden';
+      if (isDismissed && dismissed[actionIdx]) {
+        dismissReasonEl.textContent = `Dismissed: ${dismissed[actionIdx]}`;
+        dismissReasonEl.classList.remove('hidden');
+      }
+      card.appendChild(dismissReasonEl);
 
       // Action buttons row
       const buttonsRow = document.createElement('div');
@@ -797,7 +818,7 @@ function appendClinicalActions(summary, actions, dismissed = new Set(), onDismis
 
       buttonsRow.appendChild(draftBtn);
       buttonsRow.appendChild(dismissBtn);
-      if (dismissed.has(actionIdx)) buttonsRow.remove();
+      if (isDismissed) buttonsRow.remove();
       else card.appendChild(buttonsRow);
 
       container.appendChild(card);
