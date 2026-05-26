@@ -74,8 +74,8 @@ async def transcribe(audio: UploadFile = File(...)):
         model = _get_whisperx_model()
         device = _get_device()
 
-        result = model.transcribe(tmp_path, batch_size=4)
-        lang = result.get("language", "en")
+        result = model.transcribe(tmp_path, batch_size=4, language="en")
+        lang = "en"
 
         if lang not in _align_models:
             align_model, metadata = whisperx.load_align_model(

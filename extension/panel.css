@@ -484,6 +484,154 @@ body {
   border-radius: 9999px;
 }
 
+/* Action buttons row */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.action-draft-btn,
+.action-dismiss-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.action-draft-btn {
+  background: #0066cc;
+  color: #fff;
+  border-color: #0066cc;
+}
+
+.action-draft-btn:hover:not(:disabled) { opacity: 0.85; }
+.action-draft-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.action-dismiss-btn {
+  background: #fff;
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.action-dismiss-btn:hover { background: #f3f4f6; }
+
+/* Draft output area */
+.action-draft {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.action-draft-text {
+  width: 100%;
+  font-size: 12px;
+  font-family: inherit;
+  color: #374151;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  resize: vertical;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.action-copy-btn {
+  align-self: flex-end;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.action-copy-btn:hover { background: #f3f4f6; }
+
+/* Dismiss reason area */
+.action-dismiss-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+.action-dismiss-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.action-dismiss-select {
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  color: #374151;
+  background: #fff;
+}
+
+.action-dismiss-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.action-confirm-dismiss-btn,
+.action-cancel-dismiss-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid;
+}
+
+.action-confirm-dismiss-btn {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.action-confirm-dismiss-btn:hover { opacity: 0.85; }
+
+.action-cancel-dismiss-btn {
+  background: #fff;
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.action-dismiss-reason {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+  margin-top: 6px;
+}
+
+.action-dismiss-reason.hidden { display: none; }
+
+.action-cancel-dismiss-btn:hover { background: #f3f4f6; }
+
+/* Dismissed card state */
+.action-card.dismissed {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.action-card.dismissed .action-title {
+  text-decoration: line-through;
+}
+
 #send-btn {
   flex: 0 0 auto;
   height: 36px;
