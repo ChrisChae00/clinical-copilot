@@ -15,6 +15,7 @@ const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
 const drawerToggleBtn = document.getElementById('drawer-toggle-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
+const exportChatBtn = document.getElementById('export-chat-btn');
 const threadDrawer = document.getElementById('thread-drawer');
 const threadList = document.getElementById('thread-list');
 const threadSearchBar = document.getElementById('thread-search-bar');
@@ -26,9 +27,18 @@ const historyManager = new HistoryManager();
 // ── Boot ──────────────────────────────────────────────────────
 
 async function initHistory() {
-  await historyManager.createThread();
   await renderThreadList();
   await renderActiveThread();
+}
+
+async function ensureActiveThread() {
+  const state = await historyManager._load();
+  if (state.activeThreadId && state.threads[state.activeThreadId]) {
+    return state.activeThreadId;
+  }
+  const id = await historyManager.createThread();
+  await renderThreadList();
+  return id;
 }
 
 async function renderThreadList() {
@@ -104,7 +114,29 @@ async function renderActiveThread() {
   const thread = await historyManager.getThread(state.activeThreadId);
   responseArea.replaceChildren();
   if (!thread) return;
-  thread.messages.forEach(({ role, text }, i) => appendMessage(text, role, i));
+  thread.messages.forEach(({ role, text }, i) => {
+    if (role === 'transcript') {
+      try { appendTranscript(JSON.parse(text)); } catch { appendMessage(text, 'transcript', i); }
+    } else if (role === 'clinical-actions') {
+      try {
+        const { summary, actions, dismissed = {} } = JSON.parse(text);
+        const dismissedObj = Array.isArray(dismissed)
+          ? Object.fromEntries(dismissed.map(i => [i, '']))
+          : dismissed;
+        const msgIndex = i;
+        const threadId = state.activeThreadId;
+        appendClinicalActions(summary, actions, dismissedObj, async (actionIdx, reason) => {
+          const t = await historyManager.getThread(threadId);
+          if (!t) return;
+          const data = JSON.parse(t.messages[msgIndex].text);
+          data.dismissed = { ...(data.dismissed || {}), [actionIdx]: reason };
+          await historyManager.updateMessage(threadId, msgIndex, JSON.stringify(data));
+        });
+      } catch { appendMessage(text, 'assistant', i); }
+    } else {
+      appendMessage(text, role, i);
+    }
+  });
 }
 
 initHistory();
@@ -120,6 +152,57 @@ newChatBtn.addEventListener('click', async () => {
   await historyManager.createThread();
   await renderThreadList();
   await renderActiveThread();
+});
+
+exportChatBtn.addEventListener('click', async () => {
+  const state = await historyManager._load();
+  const thread = await historyManager.getThread(state.activeThreadId);
+  if (!thread || thread.messages.length === 0) {
+    appendMessage('Nothing to export — this chat is empty.', 'error');
+    return;
+  }
+
+  const date = new Date(thread.createdAt).toISOString().slice(0, 10);
+  const lines = [`Clinical Ally — ${thread.title}`, `Exported: ${new Date().toLocaleString()}`, ''];
+
+  thread.messages.forEach(({ role, text, ts }) => {
+    const time = new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (role === 'transcript') {
+      lines.push(`[${time}] TRANSCRIPT:`);
+      try {
+        JSON.parse(text).forEach(({ speaker, text: t }) => lines.push(`  ${speaker}: ${t}`));
+      } catch { lines.push(text); }
+    } else if (role === 'clinical-actions') {
+      lines.push(`[${time}] CLINICAL ACTIONS:`);
+      try {
+        const { summary, actions, dismissed = {} } = JSON.parse(text);
+        const dismissedMap = Array.isArray(dismissed)
+          ? Object.fromEntries(dismissed.map(i => [i, '']))
+          : dismissed;
+        if (summary) lines.push(`  Summary: ${summary}`);
+        actions.forEach((a, i) => {
+          const wasDismissed = i in dismissedMap;
+          const reason = dismissedMap[i];
+          const tag = wasDismissed ? ` [DISMISSED${reason ? `: ${reason}` : ''}]` : '';
+          lines.push(`  ${i + 1}. [${(a.priority || 'low').toUpperCase()}] ${a.type} — ${a.title}${tag}`);
+          if (a.description) lines.push(`     ${a.description}`);
+        });
+      } catch { lines.push(text); }
+    } else {
+      const label = role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : role.toUpperCase();
+      lines.push(`[${time}] ${label}:`);
+      lines.push(text);
+    }
+    lines.push('');
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `clinical-ally-${date}-${thread.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 });
 
 // ── Context controls ──────────────────────────────────────────
@@ -288,6 +371,8 @@ async function sendAudioForTranscription(blob) {
     }
     const { segments } = await resp.json();
     appendTranscript(segments);
+    const activeId = await ensureActiveThread();
+    await historyManager.appendMessage(activeId, 'transcript', JSON.stringify(segments));
     analyzeTranscript(segments);
   } catch (err) {
     appendMessage(`Transcription error: ${err.message}`, 'error');
@@ -302,9 +387,9 @@ async function analyzeTranscript(segments) {
   analyzingDiv.classList.add('analyzing');
 
   try {
-    const context = await requestContext();
+    const context = await contextManager.getStoredContext();
     const body = { segments };
-    if (context && context.page_type !== 'unknown') body.context = context;
+    if (context) body.context = context;
 
     const resp = await fetch(`${API_URL}/analyze-transcript`, {
       method: 'POST',
@@ -319,7 +404,17 @@ async function analyzeTranscript(segments) {
 
     const { summary, actions } = await resp.json();
     analyzingDiv.remove();
-    appendClinicalActions(summary, actions || []);
+    const activeId = await ensureActiveThread();
+    const thread = await historyManager.getThread(activeId);
+    const msgIndex = thread ? thread.messages.length : 0;
+    await historyManager.appendMessage(activeId, 'clinical-actions', JSON.stringify({ summary, actions: actions || [], dismissed: {} }));
+    appendClinicalActions(summary, actions || [], {}, async (actionIdx, reason) => {
+      const t = await historyManager.getThread(activeId);
+      if (!t) return;
+      const data = JSON.parse(t.messages[msgIndex].text);
+      data.dismissed = { ...(data.dismissed || {}), [actionIdx]: reason };
+      await historyManager.updateMessage(activeId, msgIndex, JSON.stringify(data));
+    });
   } catch (err) {
     analyzingDiv.textContent = `Analysis error: ${err.message}`;
     analyzingDiv.className = 'message error';
@@ -339,9 +434,9 @@ function appendTranscript(segments) {
     line.appendChild(document.createTextNode(text));
     container.appendChild(line);
   });
-  // Transcripts are display-only and not persisted to thread history (by design).
   responseArea.appendChild(container);
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return container;
 }
 
 // ── Chat form ─────────────────────────────────────────────────
@@ -351,9 +446,7 @@ form.addEventListener('submit', async (e) => {
   const prompt = input.value.trim();
   if (!prompt) return;
 
-  const state = await historyManager._load();
-  const activeId = state.activeThreadId;
-  if (!activeId) return;
+  const activeId = await ensureActiveThread();
 
   const threadBeforeSend = await historyManager.getThread(activeId);
   const userMsgIndex = threadBeforeSend ? threadBeforeSend.messages.length : 0;
@@ -479,6 +572,76 @@ threadSearch.addEventListener('input', async () => {
 // ── DOM helpers ───────────────────────────────────────────────
 
 function appendMessage(text, role, msgIndex) {
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.textContent = text;
+  if (msgIndex !== undefined) div.dataset.msgIndex = msgIndex;
+  responseArea.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return div;
+}
+
+function appendAutofillMessage(result) {
+  const applied = Array.isArray(result?.applied) ? result.applied : [];
+  const skipped = Array.isArray(result?.skipped) ? result.skipped : [];
+  const div = document.createElement('div');
+  div.className = 'message assistant autofill-summary';
+  const title = document.createElement('div');
+  title.className = 'autofill-title';
+  title.textContent = result?.message || (
+    applied.length ? `Autofilled ${applied.length} fields.` : 'No fields were autofilled.'
+  );
+  div.appendChild(title);
+  if (applied.length) {
+    const list = document.createElement('ul');
+    applied.forEach((field) => {
+      const item = document.createElement('li');
+      const label = field.label || field.field_id || 'Unlabeled field';
+      const value = field.value == null || field.value === '' ? '' : `: ${field.value}`;
+      item.textContent = `${label}${value}`;
+      list.appendChild(item);
+    });
+    div.appendChild(list);
+  }
+  if (skipped.length) {
+    const detail = document.createElement('div');
+    detail.className = 'autofill-detail';
+    detail.textContent = 'Skipped suggestions';
+    div.appendChild(detail);
+    const list = document.createElement('ul');
+    skipped.forEach((field) => {
+      const item = document.createElement('li');
+      const label = field.label || field.field_id || 'Unlabeled field';
+      const reason = field.reason ? `: ${field.reason}` : '';
+      item.textContent = `${label}${reason}`;
+      list.appendChild(item);
+    });
+    div.appendChild(list);
+  }
+  responseArea.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return div;
+}
+
+const DISMISS_REASONS = [
+  'Not useful',
+  'Irrelevant to this patient',
+  'Already done',
+  'Duplicate recommendation',
+  'Other',
+];
+
+const DRAFT_BTN_LABELS = {
+  referral: 'Draft Referral',
+  lab_order: 'Draft Lab Order',
+  prescription: 'Draft Prescription',
+  follow_up: 'Draft Follow-Up Note',
+  imaging: 'Draft Imaging Order',
+  note: 'Draft Note',
+  alert: 'Draft Alert',
+};
+
+function appendClinicalActions(summary, actions, dismissed = {}, onDismiss = null) {
   const ACTION_TYPE_LABELS = {
     referral: 'Referral',
     lab_order: 'Lab Order',
@@ -488,142 +651,219 @@ function appendMessage(text, role, msgIndex) {
     note: 'Note',
     alert: 'Alert',
   };
-
   const PRIORITY_LABELS = { high: 'Urgent', medium: 'Important', low: 'Routine' };
 
-  function appendClinicalActions(summary, actions) {
-    const container = document.createElement('div');
-    container.className = 'message clinical-actions';
+  const container = document.createElement('div');
+  container.className = 'message clinical-actions';
 
-    const header = document.createElement('div');
-    header.className = 'actions-header';
-    header.textContent = 'Suggested Clinical Actions';
-    container.appendChild(header);
+  const header = document.createElement('div');
+  header.className = 'actions-header';
+  header.textContent = 'Suggested Clinical Actions';
+  container.appendChild(header);
 
-    if (summary) {
-      const summaryEl = document.createElement('p');
-      summaryEl.className = 'actions-summary';
-      summaryEl.textContent = summary;
-      container.appendChild(summaryEl);
-    }
+  if (summary) {
+    const summaryEl = document.createElement('p');
+    summaryEl.className = 'actions-summary';
+    summaryEl.textContent = summary;
+    container.appendChild(summaryEl);
+  }
 
-    if (actions.length === 0) {
-      const none = document.createElement('p');
-      none.className = 'actions-empty';
-      none.textContent = 'No specific actions identified.';
-      container.appendChild(none);
-    } else {
-      actions.forEach((action) => {
-        const card = document.createElement('div');
-        card.className = `action-card priority-${action.priority || 'low'}`;
+  if (actions.length === 0) {
+    const none = document.createElement('p');
+    none.className = 'actions-empty';
+    none.textContent = 'No specific actions identified.';
+    container.appendChild(none);
+  } else {
+    actions.forEach((action, actionIdx) => {
+      const card = document.createElement('div');
+      card.className = `action-card priority-${action.priority || 'low'}`;
+      const isDismissed = actionIdx in dismissed;
+      if (isDismissed) card.classList.add('dismissed');
 
-        const cardHeader = document.createElement('div');
-        cardHeader.className = 'action-card-header';
+      const cardHeader = document.createElement('div');
+      cardHeader.className = 'action-card-header';
 
-        const badge = document.createElement('span');
-        badge.className = `action-badge priority-${action.priority || 'low'}`;
-        badge.textContent = PRIORITY_LABELS[action.priority] || action.priority;
+      const badge = document.createElement('span');
+      badge.className = `action-badge priority-${action.priority || 'low'}`;
+      badge.textContent = PRIORITY_LABELS[action.priority] || action.priority;
 
-        const type = document.createElement('span');
-        type.className = 'action-type';
-        type.textContent = ACTION_TYPE_LABELS[action.type] || action.type;
+      const type = document.createElement('span');
+      type.className = 'action-type';
+      type.textContent = ACTION_TYPE_LABELS[action.type] || action.type;
 
-        cardHeader.appendChild(badge);
-        cardHeader.appendChild(type);
-        card.appendChild(cardHeader);
+      cardHeader.appendChild(badge);
+      cardHeader.appendChild(type);
+      card.appendChild(cardHeader);
 
-        const title = document.createElement('div');
-        title.className = 'action-title';
-        title.textContent = action.title;
-        card.appendChild(title);
+      const title = document.createElement('div');
+      title.className = 'action-title';
+      title.textContent = action.title;
+      card.appendChild(title);
 
-        if (action.description) {
-          const desc = document.createElement('div');
-          desc.className = 'action-description';
-          desc.textContent = action.description;
-          card.appendChild(desc);
-        }
+      if (action.description) {
+        const desc = document.createElement('div');
+        desc.className = 'action-description';
+        desc.textContent = action.description;
+        card.appendChild(desc);
+      }
 
-        if (action.details && Object.keys(action.details).length > 0) {
-          const detailsList = document.createElement('div');
-          detailsList.className = 'action-details';
-          Object.entries(action.details).forEach(([k, v]) => {
-            const item = document.createElement('span');
-            item.className = 'action-detail-item';
-            const val = Array.isArray(v) ? v.join(', ') : v;
-            item.textContent = `${k}: ${val}`;
-            detailsList.appendChild(item);
+      if (action.details && Object.keys(action.details).length > 0) {
+        const detailsList = document.createElement('div');
+        detailsList.className = 'action-details';
+        Object.entries(action.details).forEach(([k, v]) => {
+          const item = document.createElement('span');
+          item.className = 'action-detail-item';
+          const val = Array.isArray(v) ? v.join(', ') : v;
+          item.textContent = `${k}: ${val}`;
+          detailsList.appendChild(item);
+        });
+        card.appendChild(detailsList);
+      }
+
+      // Draft area (hidden until generated)
+      const draftArea = document.createElement('div');
+      draftArea.className = 'action-draft hidden';
+
+      const draftText = document.createElement('textarea');
+      draftText.className = 'action-draft-text';
+      draftText.readOnly = true;
+      draftText.rows = 6;
+      draftArea.appendChild(draftText);
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'action-copy-btn';
+      copyBtn.textContent = 'Copy';
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(draftText.value).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+        });
+      });
+      draftArea.appendChild(copyBtn);
+      card.appendChild(draftArea);
+
+      // Dismiss reason area (hidden until dismiss clicked)
+      const dismissArea = document.createElement('div');
+      dismissArea.className = 'action-dismiss-area hidden';
+
+      const dismissLabel = document.createElement('span');
+      dismissLabel.className = 'action-dismiss-label';
+      dismissLabel.textContent = 'Why are you dismissing this?';
+      dismissArea.appendChild(dismissLabel);
+
+      const dismissSelect = document.createElement('select');
+      dismissSelect.className = 'action-dismiss-select';
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = 'Select a reason…';
+      dismissSelect.appendChild(defaultOpt);
+      DISMISS_REASONS.forEach((reason) => {
+        const opt = document.createElement('option');
+        opt.value = reason;
+        opt.textContent = reason;
+        dismissSelect.appendChild(opt);
+      });
+      dismissArea.appendChild(dismissSelect);
+
+      const dismissBtns = document.createElement('div');
+      dismissBtns.className = 'action-dismiss-btns';
+
+      const confirmDismissBtn = document.createElement('button');
+      confirmDismissBtn.className = 'action-confirm-dismiss-btn';
+      confirmDismissBtn.textContent = 'Confirm';
+      confirmDismissBtn.addEventListener('click', async () => {
+        if (!dismissSelect.value) return;
+        const reason = dismissSelect.value;
+        card.classList.add('dismissed');
+        buttonsRow.remove();
+        dismissArea.remove();
+        dismissReasonEl.textContent = `Dismissed: ${reason}`;
+        dismissReasonEl.classList.remove('hidden');
+        if (onDismiss) await onDismiss(actionIdx, reason);
+      });
+      dismissBtns.appendChild(confirmDismissBtn);
+
+      const cancelDismissBtn = document.createElement('button');
+      cancelDismissBtn.className = 'action-cancel-dismiss-btn';
+      cancelDismissBtn.textContent = 'Cancel';
+      cancelDismissBtn.addEventListener('click', () => {
+        dismissArea.classList.add('hidden');
+        buttonsRow.classList.remove('hidden');
+      });
+      dismissBtns.appendChild(cancelDismissBtn);
+      dismissArea.appendChild(dismissBtns);
+      card.appendChild(dismissArea);
+
+      const dismissReasonEl = document.createElement('div');
+      dismissReasonEl.className = 'action-dismiss-reason hidden';
+      if (isDismissed && dismissed[actionIdx]) {
+        dismissReasonEl.textContent = `Dismissed: ${dismissed[actionIdx]}`;
+        dismissReasonEl.classList.remove('hidden');
+      }
+      card.appendChild(dismissReasonEl);
+
+      // Action buttons row
+      const buttonsRow = document.createElement('div');
+      buttonsRow.className = 'action-buttons';
+
+      const draftBtn = document.createElement('button');
+      draftBtn.className = 'action-draft-btn';
+      draftBtn.textContent = DRAFT_BTN_LABELS[action.type] || 'Draft';
+      draftBtn.addEventListener('click', async () => {
+        draftBtn.disabled = true;
+        draftBtn.textContent = 'Generating…';
+        draftArea.classList.add('hidden');
+        try {
+          const storedContext = await contextManager.getStoredContext();
+          const resp = await fetch(`${API_URL}/draft-action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+            body: JSON.stringify({ action, context: storedContext }),
           });
-          card.appendChild(detailsList);
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
+            throw new Error(err.detail || `HTTP ${resp.status}`);
+          }
+          const { draft } = await resp.json();
+          draftText.value = draft;
+          draftArea.classList.remove('hidden');
+          draftBtn.textContent = 'Regenerate';
+        } catch (err) {
+          draftText.value = `Error generating draft: ${err.message}`;
+          draftArea.classList.remove('hidden');
+          draftBtn.textContent = DRAFT_BTN_LABELS[action.type] || 'Draft';
+        } finally {
+          draftBtn.disabled = false;
         }
-
-        container.appendChild(card);
       });
-    }
 
-    responseArea.appendChild(container);
-    container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }
-
-  function appendMessage(text, role) {
-    const div = document.createElement('div');
-    div.className = `message ${role}`;
-    div.textContent = text;
-    if (msgIndex !== undefined) div.dataset.msgIndex = msgIndex;
-    responseArea.appendChild(div);
-    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    return div;
-  }
-
-  function appendAutofillMessage(result) {
-    const applied = Array.isArray(result?.applied) ? result.applied : [];
-    const skipped = Array.isArray(result?.skipped) ? result.skipped : [];
-    const div = document.createElement('div');
-    div.className = 'message assistant autofill-summary';
-    const title = document.createElement('div');
-    title.className = 'autofill-title';
-    title.textContent = result?.message || (
-      applied.length ? `Autofilled ${applied.length} fields.` : 'No fields were autofilled.'
-    );
-    div.appendChild(title);
-    if (applied.length) {
-      const list = document.createElement('ul');
-      applied.forEach((field) => {
-        const item = document.createElement('li');
-        const label = field.label || field.field_id || 'Unlabeled field';
-        const value = field.value == null || field.value === '' ? '' : `: ${field.value}`;
-        item.textContent = `${label}${value}`;
-        list.appendChild(item);
+      const dismissBtn = document.createElement('button');
+      dismissBtn.className = 'action-dismiss-btn';
+      dismissBtn.textContent = 'Dismiss';
+      dismissBtn.addEventListener('click', () => {
+        buttonsRow.classList.add('hidden');
+        dismissArea.classList.remove('hidden');
       });
-      div.appendChild(list);
-    }
-    if (skipped.length) {
-      const detail = document.createElement('div');
-      detail.className = 'autofill-detail';
-      detail.textContent = 'Skipped suggestions';
-      div.appendChild(detail);
-      const list = document.createElement('ul');
-      skipped.forEach((field) => {
-        const item = document.createElement('li');
-        const label = field.label || field.field_id || 'Unlabeled field';
-        const reason = field.reason ? `: ${field.reason}` : '';
-        item.textContent = `${label}${reason}`;
-        list.appendChild(item);
-      });
-      div.appendChild(list);
-    }
-    responseArea.appendChild(div);
-    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    return div;
+
+      buttonsRow.appendChild(draftBtn);
+      buttonsRow.appendChild(dismissBtn);
+      if (isDismissed) buttonsRow.remove();
+      else card.appendChild(buttonsRow);
+
+      container.appendChild(card);
+    });
   }
 
-  function setLoading(loading) {
-    sendBtn.disabled = loading;
-    input.disabled = loading;
-    spinner.classList.toggle('hidden', !loading);
-  }
+  responseArea.appendChild(container);
+  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
 
-  function setThreadLock(locked) {
-    threadList.style.pointerEvents = locked ? 'none' : '';
-  }
+function setLoading(loading) {
+  sendBtn.disabled = loading;
+  input.disabled = loading;
+  spinner.classList.toggle('hidden', !loading);
+}
+
+function setThreadLock(locked) {
+  threadList.style.pointerEvents = locked ? 'none' : '';
 }

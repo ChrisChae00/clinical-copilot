@@ -108,6 +108,15 @@ window.HistoryManager = class HistoryManager {
     await this._save(state);
   }
 
+  async updateMessage(threadId, msgIndex, text) {
+    const state = await this._load();
+    const thread = state.threads[threadId];
+    if (!thread) throw new Error(`Thread not found: ${threadId}`);
+    if (!thread.messages[msgIndex]) throw new Error(`Message index out of range: ${msgIndex}`);
+    thread.messages[msgIndex].text = text;
+    await this._save(state);
+  }
+
   async renameThread(id, title) {
     const state = await this._load();
     const thread = state.threads[id];
