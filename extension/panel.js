@@ -216,6 +216,10 @@ autofillBtn.addEventListener('click', async () => {
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
+let recordingInterval = null;
+
+const recordingIndicator = document.getElementById('recording-visualizer');
+const recordingTimer = document.getElementById('recording-timer');
 
 voiceBtn.addEventListener('click', async () => {
   if (isRecording) { mediaRecorder.stop(); return; }
@@ -230,16 +234,41 @@ voiceBtn.addEventListener('click', async () => {
   const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
   mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+  
   mediaRecorder.onstop = async () => {
     stream.getTracks().forEach((t) => t.stop());
     voiceBtn.classList.remove('recording');
     isRecording = false;
+
+    clearInterval(recordingInterval);
+    recordingIndicator.classList.add('hidden');
+    input.classList.remove('hidden');
+
+    const endNotice = appendMessage('Recording ended. Processing audio transcription…', 'assistant');
+
     const blob = new Blob(audioChunks, mimeType ? { type: mimeType } : {});
     await sendAudioForTranscription(blob);
+
+    if (endNotice && endNotice.parentNode) {
+      endNotice.remove();
+    }
   };
+
   mediaRecorder.start();
   isRecording = true;
   voiceBtn.classList.add('recording');
+
+  input.classList.add('hidden');
+  recordingIndicator.classList.remove('hidden');
+
+  let elapsedSeconds = 0;
+  recordingTimer.textContent = '00:00';
+  recordingInterval = setInterval(() => {
+    elapsedSeconds++;
+    const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+    const secs = String(elapsedSeconds % 60).padStart(2, '0');
+    recordingTimer.textContent = `${mins}:${secs}`;
+  }, 1000);
 });
 
 async function sendAudioForTranscription(blob) {
