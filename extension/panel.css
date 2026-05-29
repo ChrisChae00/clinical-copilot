@@ -47,9 +47,7 @@ body {
   margin-left: 4px;
 }
 
-#close-btn,
-#drawer-toggle-btn,
-#new-chat-btn {
+#close-btn {
   background: none;
   border: none;
   color: #fff;
@@ -63,9 +61,7 @@ body {
   justify-content: center;
 }
 
-#close-btn:hover,
-#drawer-toggle-btn:hover,
-#new-chat-btn:hover {
+#close-btn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -74,90 +70,6 @@ body {
   flex: 1;
   display: flex;
   overflow: hidden;
-}
-
-/* ── Thread drawer ─────────────────────────────────────── */
-#thread-drawer {
-  width: 200px;
-  flex: 0 0 200px;
-  background: #f0f4f8;
-  border-right: 1px solid #d1d5db;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  padding: 8px 0;
-}
-
-#thread-drawer.hidden {
-  display: none !important;
-}
-
-#thread-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 6px;
-}
-
-.thread-item {
-  position: relative;
-  padding: 7px 28px 7px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 1.4;
-  color: #374151;
-  word-break: break-word;
-  user-select: none;
-}
-
-.thread-item:hover {
-  background: #e2e8f0;
-}
-
-.thread-item.active {
-  background: #dbeafe;
-  color: #1e40af;
-  font-weight: 500;
-}
-
-.thread-item .thread-delete-btn {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #9ca3af;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  display: none;
-  line-height: 1;
-}
-
-.thread-item:hover .thread-delete-btn {
-  display: block;
-}
-
-.thread-item .thread-delete-btn:hover {
-  color: #dc2626;
-  background: rgba(220, 38, 38, 0.1);
-}
-
-.thread-item-title {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.thread-item-title[contenteditable="true"] {
-  outline: none;
-  border-bottom: 1px solid #0066cc;
-  white-space: normal;
-  overflow: visible;
 }
 
 /* ── Main panel area ───────────────────────────────────── */
@@ -214,10 +126,6 @@ body {
   align-self: flex-start;
 }
 
-.message.search-highlight {
-  outline: 2px solid #f59e0b;
-}
-
 /* ── Loading spinner ───────────────────────────────────── */
 .spinner {
   width: 24px;
@@ -247,33 +155,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-/* ── Thread search bar ─────────────────────────────────── */
-#thread-search-bar {
-  display: flex;
-}
-
-#thread-search-bar.hidden {
-  display: none !important;
-}
-
-#thread-search {
-  flex: 1;
-  height: 30px;
-  padding: 0 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 15px;
-  font-size: 12px;
-  outline: none;
-  color: #1a1a1a;
-  background: #f9fafb;
-}
-
-#thread-search:focus {
-  border-color: #0066cc;
-  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
-  background: #fff;
 }
 
 /* ── Prompt form ───────────────────────────────────────── */

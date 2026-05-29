@@ -13,197 +13,8 @@ const autofillBtn = document.getElementById('autofill-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
-const drawerToggleBtn = document.getElementById('drawer-toggle-btn');
-const newChatBtn = document.getElementById('new-chat-btn');
-const exportChatBtn = document.getElementById('export-chat-btn');
-const threadDrawer = document.getElementById('thread-drawer');
-const threadList = document.getElementById('thread-list');
-const threadSearchBar = document.getElementById('thread-search-bar');
-const threadSearch = document.getElementById('thread-search');
 
 const contextManager = new ContextManager();
-const historyManager = new HistoryManager();
-
-// ── Boot ──────────────────────────────────────────────────────
-
-async function initHistory() {
-  await renderThreadList();
-  await renderActiveThread();
-}
-
-async function ensureActiveThread() {
-  const state = await historyManager._load();
-  if (state.activeThreadId && state.threads[state.activeThreadId]) {
-    return state.activeThreadId;
-  }
-  const id = await historyManager.createThread();
-  await renderThreadList();
-  return id;
-}
-
-async function renderThreadList() {
-  const state = await historyManager._load();
-  const threads = Object.values(state.threads)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
-  threadList.replaceChildren();
-  threads.forEach(({ id, title }) => {
-    const item = document.createElement('div');
-    item.className = `thread-item${id === state.activeThreadId ? ' active' : ''}`;
-    item.dataset.id = id;
-    item.setAttribute('role', 'listitem');
-
-    const titleSpan = document.createElement('span');
-    titleSpan.className = 'thread-item-title';
-    titleSpan.textContent = title;
-    titleSpan.title = title;
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'thread-delete-btn';
-    delBtn.textContent = '\xd7';
-    delBtn.setAttribute('aria-label', `Delete ${title}`);
-    delBtn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await historyManager.deleteThread(id);
-      await renderThreadList();
-      await renderActiveThread();
-    });
-
-    item.appendChild(titleSpan);
-    item.appendChild(delBtn);
-
-    item.addEventListener('click', async () => {
-      await historyManager.setActive(id);
-      await renderThreadList();
-      await renderActiveThread();
-    });
-
-    titleSpan.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      titleSpan.contentEditable = 'true';
-      titleSpan.focus();
-      const range = document.createRange();
-      range.selectNodeContents(titleSpan);
-      window.getSelection().removeAllRanges();
-      window.getSelection().addRange(range);
-    });
-
-    titleSpan.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); titleSpan.blur(); }
-      if (e.key === 'Escape') {
-        titleSpan.contentEditable = 'false';
-        titleSpan.textContent = title;
-      }
-    });
-
-    titleSpan.addEventListener('blur', async () => {
-      if (titleSpan.contentEditable !== 'true') return;
-      titleSpan.contentEditable = 'false';
-      const newTitle = titleSpan.textContent.trim();
-      if (newTitle && newTitle !== title) {
-        await historyManager.renameThread(id, newTitle);
-        await renderThreadList();
-      }
-    });
-
-    threadList.appendChild(item);
-  });
-}
-
-async function renderActiveThread() {
-  const state = await historyManager._load();
-  const thread = await historyManager.getThread(state.activeThreadId);
-  responseArea.replaceChildren();
-  if (!thread) return;
-  thread.messages.forEach(({ role, text }, i) => {
-    if (role === 'transcript') {
-      try { appendTranscript(JSON.parse(text)); } catch { appendMessage(text, 'transcript', i); }
-    } else if (role === 'clinical-actions') {
-      try {
-        const { summary, actions, dismissed = {} } = JSON.parse(text);
-        const dismissedObj = Array.isArray(dismissed)
-          ? Object.fromEntries(dismissed.map(i => [i, '']))
-          : dismissed;
-        const msgIndex = i;
-        const threadId = state.activeThreadId;
-        appendClinicalActions(summary, actions, dismissedObj, async (actionIdx, reason) => {
-          const t = await historyManager.getThread(threadId);
-          if (!t) return;
-          const data = JSON.parse(t.messages[msgIndex].text);
-          data.dismissed = { ...(data.dismissed || {}), [actionIdx]: reason };
-          await historyManager.updateMessage(threadId, msgIndex, JSON.stringify(data));
-        });
-      } catch { appendMessage(text, 'assistant', i); }
-    } else {
-      appendMessage(text, role, i);
-    }
-  });
-}
-
-initHistory();
-
-// ── Header controls ───────────────────────────────────────────
-
-drawerToggleBtn.addEventListener('click', () => {
-  const isHidden = threadDrawer.classList.toggle('hidden');
-  threadSearchBar.classList.toggle('hidden', isHidden);
-});
-
-newChatBtn.addEventListener('click', async () => {
-  await historyManager.createThread();
-  await renderThreadList();
-  await renderActiveThread();
-});
-
-exportChatBtn.addEventListener('click', async () => {
-  const state = await historyManager._load();
-  const thread = await historyManager.getThread(state.activeThreadId);
-  if (!thread || thread.messages.length === 0) {
-    appendMessage('Nothing to export — this chat is empty.', 'error');
-    return;
-  }
-
-  const date = new Date(thread.createdAt).toISOString().slice(0, 10);
-  const lines = [`Clinical Ally — ${thread.title}`, `Exported: ${new Date().toLocaleString()}`, ''];
-
-  thread.messages.forEach(({ role, text, ts }) => {
-    const time = new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (role === 'transcript') {
-      lines.push(`[${time}] TRANSCRIPT:`);
-      try {
-        JSON.parse(text).forEach(({ speaker, text: t }) => lines.push(`  ${speaker}: ${t}`));
-      } catch { lines.push(text); }
-    } else if (role === 'clinical-actions') {
-      lines.push(`[${time}] CLINICAL ACTIONS:`);
-      try {
-        const { summary, actions, dismissed = {} } = JSON.parse(text);
-        const dismissedMap = Array.isArray(dismissed)
-          ? Object.fromEntries(dismissed.map(i => [i, '']))
-          : dismissed;
-        if (summary) lines.push(`  Summary: ${summary}`);
-        actions.forEach((a, i) => {
-          const wasDismissed = i in dismissedMap;
-          const reason = dismissedMap[i];
-          const tag = wasDismissed ? ` [DISMISSED${reason ? `: ${reason}` : ''}]` : '';
-          lines.push(`  ${i + 1}. [${(a.priority || 'low').toUpperCase()}] ${a.type} — ${a.title}${tag}`);
-          if (a.description) lines.push(`     ${a.description}`);
-        });
-      } catch { lines.push(text); }
-    } else {
-      const label = role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : role.toUpperCase();
-      lines.push(`[${time}] ${label}:`);
-      lines.push(text);
-    }
-    lines.push('');
-  });
-
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `clinical-ally-${date}-${thread.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40)}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
 
 // ── Context controls ──────────────────────────────────────────
 
@@ -342,8 +153,6 @@ async function sendAudioForTranscription(blob) {
     }
     const { segments } = await resp.json();
     appendTranscript(segments);
-    const activeId = await ensureActiveThread();
-    await historyManager.appendMessage(activeId, 'transcript', JSON.stringify(segments));
     analyzeTranscript(segments);
   } catch (err) {
     appendMessage(`Transcription error: ${err.message}`, 'error');
@@ -375,17 +184,7 @@ async function analyzeTranscript(segments) {
 
     const { summary, actions } = await resp.json();
     analyzingDiv.remove();
-    const activeId = await ensureActiveThread();
-    const thread = await historyManager.getThread(activeId);
-    const msgIndex = thread ? thread.messages.length : 0;
-    await historyManager.appendMessage(activeId, 'clinical-actions', JSON.stringify({ summary, actions: actions || [], dismissed: {} }));
-    appendClinicalActions(summary, actions || [], {}, async (actionIdx, reason) => {
-      const t = await historyManager.getThread(activeId);
-      if (!t) return;
-      const data = JSON.parse(t.messages[msgIndex].text);
-      data.dismissed = { ...(data.dismissed || {}), [actionIdx]: reason };
-      await historyManager.updateMessage(activeId, msgIndex, JSON.stringify(data));
-    });
+    appendClinicalActions(summary, actions || []);
   } catch (err) {
     analyzingDiv.textContent = `Analysis error: ${err.message}`;
     analyzingDiv.className = 'message error';
@@ -417,15 +216,9 @@ form.addEventListener('submit', async (e) => {
   const prompt = input.value.trim();
   if (!prompt) return;
 
-  const activeId = await ensureActiveThread();
-
-  const threadBeforeSend = await historyManager.getThread(activeId);
-  const userMsgIndex = threadBeforeSend ? threadBeforeSend.messages.length : 0;
-  appendMessage(prompt, 'user', userMsgIndex);
-  await historyManager.appendMessage(activeId, 'user', prompt);
+  appendMessage(prompt, 'user');
   input.value = '';
   setLoading(true);
-  setThreadLock(true);
 
   try {
     const storedContext = await contextManager.getStoredContext();
@@ -444,13 +237,11 @@ form.addEventListener('submit', async (e) => {
       throw new Error(err.detail || `HTTP ${resp.status}`);
     }
 
-    const assistantMsgIndex = userMsgIndex + 1;
-    const msgDiv = appendMessage('', 'assistant', assistantMsgIndex);
+    const msgDiv = appendMessage('', 'assistant');
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
     let streamDone = false;
-    let assistantText = '';
 
     setLoading(false);
 
@@ -467,7 +258,6 @@ form.addEventListener('submit', async (e) => {
         try {
           const token = JSON.parse(payload);
           msgDiv.textContent += token;
-          assistantText += token;
           msgDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
         } catch { /* malformed chunk */ }
       }
@@ -479,74 +269,23 @@ form.addEventListener('submit', async (e) => {
         try {
           const token = JSON.parse(payload);
           msgDiv.textContent += token;
-          assistantText += token;
         } catch { /* malformed chunk */ }
       }
     }
     reader.cancel();
-
-    if (assistantText) {
-      await historyManager.appendMessage(activeId, 'assistant', assistantText);
-      await autoTitleIfNeeded(activeId, prompt, assistantText);
-    }
   } catch (err) {
     appendMessage(`Error: ${err.message}`, 'error');
   } finally {
     setLoading(false);
-    setThreadLock(false);
   }
-});
-
-async function autoTitleIfNeeded(threadId, userPrompt, assistantText) {
-  const thread = await historyManager.getThread(threadId);
-  if (!thread || thread.title !== 'New chat') return;
-  try {
-    const summaryPrompt =
-      'Summarize this exchange in 6 words or fewer as a chat title. No punctuation.\n' +
-      `User: ${userPrompt.slice(0, 200)}\nAssistant: ${assistantText.slice(0, 200)}`;
-    const resp = await fetch(`${API_URL}/generate-str`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-      body: JSON.stringify({ prompt: summaryPrompt }),
-    });
-    if (!resp.ok) return;
-    const raw = await resp.json();
-    const title = String(raw).trim().replace(/^["']|["']$/g, '').slice(0, 60);
-    if (title) {
-      await historyManager.renameThread(threadId, title);
-      await renderThreadList();
-    }
-  } catch (e) {
-    console.warn('[ClinicalAlly] thread title generation failed:', e.message);
-  }
-}
-
-// ── Thread search ─────────────────────────────────────────────
-
-threadSearch.addEventListener('input', async () => {
-  const query = threadSearch.value.trim();
-  responseArea.querySelectorAll('.message').forEach(el => el.classList.remove('search-highlight'));
-  if (!query) return;
-
-  const state = await historyManager._load();
-  const matchIndices = await historyManager.searchInThread(state.activeThreadId, query);
-  if (!matchIndices.length) return;
-
-  matchIndices.forEach(i => {
-    const el = responseArea.querySelector(`[data-msg-index="${i}"]`);
-    if (el) el.classList.add('search-highlight');
-  });
-  const firstEl = responseArea.querySelector(`[data-msg-index="${matchIndices[0]}"]`);
-  if (firstEl) firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
 
 // ── DOM helpers ───────────────────────────────────────────────
 
-function appendMessage(text, role, msgIndex) {
+function appendMessage(text, role) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
   div.textContent = text;
-  if (msgIndex !== undefined) div.dataset.msgIndex = msgIndex;
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
@@ -612,7 +351,7 @@ const DRAFT_BTN_LABELS = {
   alert: 'Draft Alert',
 };
 
-function appendClinicalActions(summary, actions, dismissed = {}, onDismiss = null) {
+function appendClinicalActions(summary, actions) {
   const ACTION_TYPE_LABELS = {
     referral: 'Referral',
     lab_order: 'Lab Order',
@@ -648,8 +387,6 @@ function appendClinicalActions(summary, actions, dismissed = {}, onDismiss = nul
     actions.forEach((action, actionIdx) => {
       const card = document.createElement('div');
       card.className = `action-card priority-${action.priority || 'low'}`;
-      const isDismissed = actionIdx in dismissed;
-      if (isDismissed) card.classList.add('dismissed');
 
       const cardHeader = document.createElement('div');
       cardHeader.className = 'action-card-header';
@@ -742,7 +479,7 @@ function appendClinicalActions(summary, actions, dismissed = {}, onDismiss = nul
       const confirmDismissBtn = document.createElement('button');
       confirmDismissBtn.className = 'action-confirm-dismiss-btn';
       confirmDismissBtn.textContent = 'Confirm';
-      confirmDismissBtn.addEventListener('click', async () => {
+      confirmDismissBtn.addEventListener('click', () => {
         if (!dismissSelect.value) return;
         const reason = dismissSelect.value;
         card.classList.add('dismissed');
@@ -750,7 +487,6 @@ function appendClinicalActions(summary, actions, dismissed = {}, onDismiss = nul
         dismissArea.remove();
         dismissReasonEl.textContent = `Dismissed: ${reason}`;
         dismissReasonEl.classList.remove('hidden');
-        if (onDismiss) await onDismiss(actionIdx, reason);
       });
       dismissBtns.appendChild(confirmDismissBtn);
 
@@ -767,10 +503,6 @@ function appendClinicalActions(summary, actions, dismissed = {}, onDismiss = nul
 
       const dismissReasonEl = document.createElement('div');
       dismissReasonEl.className = 'action-dismiss-reason hidden';
-      if (isDismissed && dismissed[actionIdx]) {
-        dismissReasonEl.textContent = `Dismissed: ${dismissed[actionIdx]}`;
-        dismissReasonEl.classList.remove('hidden');
-      }
       card.appendChild(dismissReasonEl);
 
       // Action buttons row
@@ -818,8 +550,7 @@ function appendClinicalActions(summary, actions, dismissed = {}, onDismiss = nul
 
       buttonsRow.appendChild(draftBtn);
       buttonsRow.appendChild(dismissBtn);
-      if (isDismissed) buttonsRow.remove();
-      else card.appendChild(buttonsRow);
+      card.appendChild(buttonsRow);
 
       container.appendChild(card);
     });
@@ -833,8 +564,4 @@ function setLoading(loading) {
   sendBtn.disabled = loading;
   input.disabled = loading;
   spinner.classList.toggle('hidden', !loading);
-}
-
-function setThreadLock(locked) {
-  threadList.style.pointerEvents = locked ? 'none' : '';
 }
