@@ -84,7 +84,7 @@ async def autofill(request: Request):
     llm_prompt = _build_autofill_prompt(prompt, context, fields)
     try:
         llm_response = await get_llm_response_json(
-            prompt=llm_prompt, system_prompt=SYSTEM_PROMPT_AUTOFILL
+            prompt=llm_prompt, additional_system_prompt=SYSTEM_PROMPT_AUTOFILL
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

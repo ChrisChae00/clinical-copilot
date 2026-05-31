@@ -6,8 +6,17 @@ import json
 from typing import AsyncGenerator
 
 import httpx
-from config import MAX_CONTEXT_LEN, MODEL_NAME, OLLAMA_URL
-from llm.prompts import SYSTEM_PROMPT
+
+if __name__ == "__main__":
+    # test values for running this file by itself (w.o docker)
+    MAX_CONTEXT_LEN = 8192
+    MODEL_NAME = "qwen2.5vl:7b"
+    OLLAMA_URL = "http://localhost:11434"
+    from .prompts import BASE_SYSTEM_PROMPT
+else:
+    # import values for prod
+    from config import MAX_CONTEXT_LEN, MODEL_NAME, OLLAMA_URL
+    from llm.prompts import BASE_SYSTEM_PROMPT
 
 
 def _build_contextual_prompt(prompt: str, context: dict | None = None) -> str:
@@ -23,14 +32,17 @@ def _build_contextual_prompt(prompt: str, context: dict | None = None) -> str:
     return (
         f"{prompt}\n\n"
         "### CURRENT PATIENT CONTEXT ###\n"
-        "The following information was extracted from the current EMR page. "
+        "The following information was extracted from the current EMR page"
         "Use it to give context-aware, relevant responses.\n"
         f"{context_str}"
     )
 
 
 async def stream_llm_response(
-    prompt: str, context: dict | None = None
+    prompt: str,
+    context: dict | None = None,
+    additional_system_prompt: str | None = None,
+    images_b64: list[str] | None = None,
 ) -> AsyncGenerator[str, None]:
     """
     Stream tokens from Ollama as server-sent events.
@@ -39,12 +51,16 @@ async def stream_llm_response(
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
 
-    system = SYSTEM_PROMPT
+    if additional_system_prompt:
+        system_prompt = BASE_SYSTEM_PROMPT + "\n\n" + additional_system_prompt
+    else:
+        system_prompt = BASE_SYSTEM_PROMPT
+
     prompt = _build_contextual_prompt(prompt, context)
 
     payload = {
         "model": MODEL_NAME,
-        "system": system,
+        "system": system_prompt,
         "prompt": prompt,
         "stream": True,
         "options": {"num_ctx": MAX_CONTEXT_LEN},
@@ -77,7 +93,8 @@ async def stream_llm_response(
 async def get_llm_response_str(
     prompt: str,
     context: dict | None = None,
-    system_prompt: str | None = None,
+    additional_system_prompt: str | None = None,
+    images_b64: list[str] | None = None,
 ) -> str:
     """
 
@@ -85,6 +102,9 @@ async def get_llm_response_str(
     calls the /api/generate endpoint of in Ollama
     args:
         prompt (str): The prompt to send to the LLM
+        system_prompt (str, optional): Custom system prompt to be appended to the default prompt. If not provided, just the BASE_SYSTEM_PROMPT will be used.
+        context (dict, optional): context in JSON format to include in the prompt. Defaults to None.
+        images_b64 (list of str, optional): list of base64-encoded images to include in the prompt. Defaults to None.
     returns:
         response (str): The text response from the LLM
     raises:
@@ -112,13 +132,22 @@ async def get_llm_response_str(
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
 
-    system = system_prompt if system_prompt is not None else SYSTEM_PROMPT
+    if additional_system_prompt:
+        system_prompt = BASE_SYSTEM_PROMPT + "\n\n" + additional_system_prompt
+    else:
+        system_prompt = BASE_SYSTEM_PROMPT
+
+    # print(f"DEBUG: system prompt:\n{system_prompt}\n")
+
     prompt = _build_contextual_prompt(prompt, context)
+
+    # print(f"DEBUG: prompt sent to LLM:\n{prompt}\n")
 
     payload = {
         "model": MODEL_NAME,
-        "system": system,
+        "system": system_prompt,
         "prompt": prompt,
+        "images": images_b64 or [],
         "stream": False,
         "options": {"num_ctx": MAX_CONTEXT_LEN},
     }
@@ -144,32 +173,39 @@ async def get_llm_response_str(
 # json version
 async def get_llm_response_json(
     prompt: str,
-    system_prompt: str = SYSTEM_PROMPT,
     context: dict | None = None,
+    additional_system_prompt: str | None = None,
+    images_b64: list[str] | None = None,
 ) -> dict:
     """
     Calls the /api/generate endpoint of in Ollama in json mode so it always return a json
 
     args:
     - prompt (str)
-    - system_prompt (str)
+    - system_prompt (str, optional): Custom system prompt to be appended to the default prompt. If not provided, just the BASE_SYSTEM_PROMPT will be used.
+    - context (dict, optional): context in JSON format to include in the prompt. Defaults to None.
+    - images_b64 (list of str, optional): list of base64-encoded images to include in the prompt. Defaults to None.
     returns:
     - response (dict/json)
     raises:
         ValueError: If the prompt is invalid
         RuntimeError: If there is an issue communicating with Ollama or if the LLM returns invalid JSON
-
-    note: system_prompt is optional. It default to SYSTEM_PROMPT.
     """
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
 
     prompt = _build_contextual_prompt(prompt, context)
 
+    if additional_system_prompt:
+        system_prompt = BASE_SYSTEM_PROMPT + "\n\n" + additional_system_prompt
+    else:
+        system_prompt = BASE_SYSTEM_PROMPT
+
     payload = {
         "model": MODEL_NAME,
         "system": system_prompt,
         "prompt": prompt,
+        "images": images_b64 or [],
         "stream": False,
         "format": "json",
         "options": {"num_ctx": MAX_CONTEXT_LEN},
@@ -220,3 +256,28 @@ async def is_ollama_healthy() -> bool:
             f"WARNING: Ollama health check failed (status {e.response.status_code}): {e}"
         )
         return False
+
+
+if __name__ == "__main__":
+
+    import asyncio
+
+    prompt = "who is my patient? give me all the info"
+
+    context = {
+        "patient_name": "John Doe",
+        "patient_age": 45,
+        "current_medications": ["Lisinopril", "Metformin"],
+    }
+    image_path = "tests/test_report.png"
+
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+    import base64
+
+    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+    response = asyncio.run(
+        get_llm_response_json(prompt=prompt, context=context, images_b64=[image_b64])
+    )
+    print("LLM response:", response)

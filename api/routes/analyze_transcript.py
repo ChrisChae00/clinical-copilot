@@ -40,10 +40,14 @@ async def analyze_transcript(request: Request):
     try:
         body = await request.json()
     except Exception as e:
-        raise HTTPException(status_code=400, detail="Request body must be valid JSON") from e
+        raise HTTPException(
+            status_code=400, detail="Request body must be valid JSON"
+        ) from e
 
     if not isinstance(body, dict):
-        raise HTTPException(status_code=400, detail="Request body must be a JSON object")
+        raise HTTPException(
+            status_code=400, detail="Request body must be a JSON object"
+        )
 
     segments = body.get("segments")
     context = body.get("context")
@@ -56,7 +60,7 @@ async def analyze_transcript(request: Request):
     try:
         result = await get_llm_response_json(
             prompt=prompt,
-            system_prompt=SYSTEM_PROMPT_ANALYZE_TRANSCRIPT,
+            additional_system_prompt=SYSTEM_PROMPT_ANALYZE_TRANSCRIPT,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -68,8 +72,7 @@ async def analyze_transcript(request: Request):
 
 def _build_prompt(segments: list, context: object) -> str:
     transcript_lines = "\n".join(
-        f"{seg.get('speaker', 'UNKNOWN')}: {seg.get('text', '')}"
-        for seg in segments
+        f"{seg.get('speaker', 'UNKNOWN')}: {seg.get('text', '')}" for seg in segments
     )
 
     parts = [

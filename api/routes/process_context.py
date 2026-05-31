@@ -119,7 +119,7 @@ async def process_context(request: Request):
     try:
         complete_context = await get_llm_response_json(
             prompt=prompt,
-            system_prompt=SYSTEM_PROMPT_PROCESS_CONTEXT,
+            additional_system_prompt=SYSTEM_PROMPT_PROCESS_CONTEXT,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
