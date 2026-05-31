@@ -30,7 +30,15 @@ from llm.prompts import SYSTEM_PROMPT_DRAFT_ACTION
 
 router = APIRouter()
 
-VALID_TYPES = {"referral", "lab_order", "prescription", "follow_up", "imaging", "note", "alert"}
+VALID_TYPES = {
+    "referral",
+    "lab_order",
+    "prescription",
+    "follow_up",
+    "imaging",
+    "note",
+    "alert",
+}
 
 
 @router.post("/draft-action", dependencies=[Depends(require_api_key)])
@@ -38,7 +46,9 @@ async def draft_action(request: Request):
     try:
         body = await request.json()
     except Exception as e:
-        raise HTTPException(status_code=400, detail="Request body must be valid JSON") from e
+        raise HTTPException(
+            status_code=400, detail="Request body must be valid JSON"
+        ) from e
 
     action = body.get("action")
     context = body.get("context")
@@ -48,15 +58,22 @@ async def draft_action(request: Request):
 
     action_type = action.get("type")
     if action_type not in VALID_TYPES:
-        raise HTTPException(status_code=400, detail=f"action.type must be one of: {', '.join(VALID_TYPES)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"action.type must be one of: {', '.join(VALID_TYPES)}",
+        )
 
     if context is not None and not isinstance(context, dict):
-        raise HTTPException(status_code=400, detail="context must be a JSON object if provided")
+        raise HTTPException(
+            status_code=400, detail="context must be a JSON object if provided"
+        )
 
     prompt = _build_prompt(action, context)
 
     try:
-        draft = await get_llm_response_str(prompt=prompt, system_prompt=SYSTEM_PROMPT_DRAFT_ACTION)
+        draft = await get_llm_response_str(
+            prompt=prompt, additional_system_prompt=SYSTEM_PROMPT_DRAFT_ACTION
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except RuntimeError as e:
