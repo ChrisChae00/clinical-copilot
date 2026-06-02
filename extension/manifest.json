@@ -18,7 +18,12 @@
   "web_accessible_resources": [
     {
       "resources": ["panel.html", "panel.css", "panel.js"],
-      "matches": ["*://localhost/*", "*://localhost:8080/*", "*://localhost:8443/*", "*://localhost:8000/*"]
+      "matches": [
+        "*://localhost/*",
+        "*://localhost:8080/*",
+        "*://localhost:8443/*",
+        "*://localhost:8000/*"
+      ]
     }
   ],
   "host_permissions": [
