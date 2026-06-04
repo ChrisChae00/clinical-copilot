@@ -1241,5 +1241,5 @@ if __name__ == "__main__":
     result = asyncio.run(clean_dom(test_html))
     print(result)
 
-    with open("tests/testpage1_cleaned.md", "w", encoding="utf-8") as f:
-        f.write(result)
+    # with open("tests/testpage1_cleaned.md", "w", encoding="utf-8") as f:
+    #     f.write(result)
