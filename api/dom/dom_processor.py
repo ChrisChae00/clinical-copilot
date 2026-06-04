@@ -54,14 +54,7 @@ CONTROL_CLASS_TOKENS = {
     "toast",
 }
 
-CONTROL_ROLE_TOKENS = {
-    "menu",
-    "menubar",
-    "toolbar",
-    "tooltip",
-    "dialog",
-    "alertdialog",
-}
+CONTROL_ROLE_TOKENS = {"menu", "menubar", "toolbar", "tooltip", "dialog", "alertdialog"}
 
 BLOCK_TAGS = {
     "address",
@@ -126,38 +119,10 @@ MARKDOWN_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 UI_NOISE_EXACT_RE = re.compile(
     r"""
     ^(
-        \+|
-        edit|
-        view|
-        print|
-        rev|
-        save|
-        cancel|
-        close|
-        delete|
-        remove|
-        add|
-        update|
-        submit|
-        reset|
-        search|
-        filter|
-        loading|
-        working\s*\.\.\.|
-        calendar|
-        browse|
-        expand|
-        collapse|
-        minimize\s+display|
-        toggle\s+print\s+note|
-        toggle\s+print|
-        display\s+resolved\s+issues|
-        display\s+unresolved\s+issues|
-        load\s+all\s+notes|
-        expand\s+all\s+loaded\s+notes|
-        collapse\s+all\s+loaded\s+notes|
-        browse\s+notes|
-        print\s+dialog
+        \+|edit|view|print|rev|save|cancel|close|delete|remove|add|update|submit|reset|search|filter|
+        loading|working\s*\.\.\.|calendar|browse|expand|collapse|minimize\s+display|toggle\s+print\s+note|
+        toggle\s+print|display\s+resolved\s+issues|display\s+unresolved\s+issues|load\s+all\s+notes|
+        expand\s+all\s+loaded\s+notes|collapse\s+all\s+loaded\s+notes|browse\s+notes|print\s+dialog
     )$
     """,
     re.I | re.X,
@@ -165,12 +130,20 @@ UI_NOISE_EXACT_RE = re.compile(
 
 UI_PHRASE_RE = re.compile(
     r"\b("
-    r"template search|oscar search|ocean toolbar|tools calculators|"
-    r"display resolved issues|display unresolved issues|"
-    r"load all notes|expand all loaded notes|collapse all loaded notes|"
-    r"browse notes|research: tools"
+    r"template search|oscar search|ocean toolbar|tools calculators|display resolved issues|display unresolved issues|"
+    r"load all notes|expand all loaded notes|collapse all loaded notes|browse notes|research: tools|scratch pad|edit your personal setting"
     r")\b",
     re.I,
+)
+
+PLACEHOLDER_VALUE_RE = re.compile(
+    r"""
+    ^(
+        \(?yyyy[-_/ ]?mm[-_/ ]?dd\)?|yyyy-mm-dd|active/resolved/\.\.\.|not\s+set|no\s+yes|
+        selected|from\s*:|to\s*:|dates\s+today|assigned\s+issues|insert\s+position|all|none|n/?a|choose|select
+    )$
+    """,
+    re.I | re.X,
 )
 
 
@@ -179,12 +152,12 @@ async def clean_dom(raw_html: str) -> str:
     Convert messy raw HTML into structured, LLM-readable Markdown.
 
     Fixed behavior:
-    - Remove scripts, styles, hidden fields, icons, buttons, click handlers, CSS, and UI mechanics.
-    - Keep visible page text.
-    - Keep visible link text, but remove hrefs/URLs from links.
-    - Keep plain-text URLs written inside notes.
-    - Keep headings, lists, tables, label/value structure, populated side summaries, and active textarea content.
-    - Return Markdown.
+    - Removes scripts, CSS, hidden fields, images, icons, buttons, links, click handlers, and UI mechanics.
+    - Keeps visible page text.
+    - Keeps visible link text but removes href/navigation behavior.
+    - Keeps plain-text URLs written inside notes.
+    - Keeps headings, lists, tables, label/value structure, populated summaries, and active textarea content.
+    - Returns Markdown.
     """
 
     if not isinstance(raw_html, str) or not raw_html.strip():
@@ -208,11 +181,14 @@ def _sanitize_html(raw_html: str) -> BeautifulSoup:
     _remove_hidden_elements(soup)
     _remove_popup_and_control_containers(soup)
     _replace_form_controls_with_visible_values(soup)
+    _remove_empty_fieldsets(soup)
+    _remove_placeholder_only_tables(soup)
     _remove_buttons(soup)
     _remove_images(soup)
     _unwrap_links_keep_visible_text(soup)
     _remove_event_and_style_attributes(soup)
     _replace_label_value_blocks(soup)
+    _remove_heading_only_containers(soup)
     _remove_empty_layout_elements(soup)
 
     return soup
@@ -229,10 +205,6 @@ def _parse_html(raw_html: str) -> BeautifulSoup:
 
 
 def _normalize_bs4_tag_attrs(soup: BeautifulSoup) -> None:
-    """
-    Malformed HTML can produce BeautifulSoup Tag objects where attrs is None.
-    BeautifulSoup's tag.has_attr(...) assumes attrs is iterable, so normalize it.
-    """
     for tag in soup.find_all(True):
         if getattr(tag, "attrs", None) is None:
             tag.attrs = {}
@@ -284,14 +256,6 @@ def _is_hidden(tag: Tag) -> bool:
 
 
 def _remove_popup_and_control_containers(soup: BeautifulSoup) -> None:
-    """
-    Remove generic UI containers, but do not remove broad page layout regions.
-
-    Important:
-    We intentionally do NOT drop every class/id containing "nav", "menu", or "sidebar",
-    because EMR sidebars can contain real patient summaries.
-    """
-
     for tag in reversed(list(soup.find_all(True))):
         if _is_live_tag(tag) and _is_popup_or_control_container(tag):
             tag.decompose()
@@ -315,13 +279,22 @@ def _is_popup_or_control_container(tag: Tag) -> bool:
     else:
         classes = []
 
-    if {c.lower().strip() for c in classes} & CONTROL_CLASS_TOKENS:
+    class_tokens = {c.lower().strip() for c in classes}
+
+    if class_tokens & CONTROL_CLASS_TOKENS:
         return True
 
+    class_text = " ".join(class_tokens)
     element_id = str(attrs.get("id", "")).lower().strip()
+    attr_text = f"{element_id} {class_text}"
 
-    # Drop popup menus like id="menu1", but avoid dropping useful classes such as
-    # "nav-menu-heading" or populated side sections.
+    if re.search(
+        r"(^|[-_\s])(user[-_]?settings|account[-_]?menu|profile[-_]?menu|encounter[-_]?tools|tool[-_]?box|tool[-_]?bar|search[-_]?tools)([-_\s]|$)",
+        attr_text,
+        re.I,
+    ):
+        return True
+
     return bool(
         re.fullmatch(
             r"(menu|popup|tooltip|toolbar|spinner|loader|modal)\d*", element_id
@@ -353,18 +326,19 @@ def _visible_form_value(tag: Tag, soup: BeautifulSoup) -> str | None:
         value = _normalize_text(
             tag.get_text("\n", strip=True) or attrs.get("value", "")
         )
+
         if not _meaningful_value(value):
             return None
 
         return _format_label_value(_find_form_label(tag, soup), value)
 
     if tag_name == "select":
-        values = []
+        values: list[str] = []
 
-        # Only preserve selected options. Unselected dropdown options are usually UI choices.
         for option in tag.select("option[selected]"):
             value = _normalize_text(option.get_text(" ", strip=True))
-            if _meaningful_value(value):
+
+            if _meaningful_value(value) and not _placeholder_value(value):
                 values.append(value)
 
         if not values:
@@ -385,14 +359,18 @@ def _visible_form_value(tag: Tag, soup: BeautifulSoup) -> str | None:
             label = _find_form_label(tag, soup)
             value = _normalize_text(attrs.get("value", ""))
 
-            if _meaningful_value(value) and value.lower() not in {"on", "true"}:
+            if (
+                _meaningful_value(value)
+                and value.lower() not in {"on", "true"}
+                and not _placeholder_value(value)
+            ):
                 return _format_label_value(label, value)
 
             return label if _meaningful_value(label) else None
 
         value = _normalize_text(attrs.get("value", ""))
 
-        if not _meaningful_value(value):
+        if not _meaningful_value(value) or _placeholder_value(value):
             return None
 
         return _format_label_value(_find_form_label(tag, soup), value)
@@ -409,12 +387,15 @@ def _find_form_label(tag: Tag, soup: BeautifulSoup) -> str:
     field_id = attrs.get("id")
     if field_id:
         label = soup.find("label", attrs={"for": field_id})
+
         if isinstance(label, Tag):
             text = _normalize_text(label.get_text(" ", strip=True))
+
             if _meaningful_value(text):
                 return text
 
     parent = tag.parent
+
     if isinstance(parent, Tag) and _safe_tag_name(parent) == "label":
         parent_text = _normalize_text(parent.get_text(" ", strip=True))
         current_value = _normalize_text(attrs.get("value", ""))
@@ -427,13 +408,13 @@ def _find_form_label(tag: Tag, soup: BeautifulSoup) -> str:
 
     for attr in ("aria-label", "placeholder", "title"):
         value = _normalize_text(attrs.get(attr, ""))
-        if _meaningful_value(value):
+
+        if _meaningful_value(value) and not _placeholder_value(value):
             return value
 
-    # Last resort: id/name are not ideal, but better than losing context
-    # for populated fields.
     for attr in ("name", "id"):
         value = _normalize_text(attrs.get(attr, ""))
+
         if _meaningful_value(value):
             return _humanize_identifier(value)
 
@@ -462,10 +443,7 @@ def _humanize_identifier(value: str) -> str:
 def _meaningful_value(value: str) -> bool:
     value = _normalize_text(value)
 
-    if not value:
-        return False
-
-    if not re.search(r"[A-Za-z0-9]", value):
+    if not value or not re.search(r"[A-Za-z0-9]", value):
         return False
 
     return value.lower() not in {
@@ -478,6 +456,123 @@ def _meaningful_value(value: str) -> bool:
         "choose",
         "click",
     }
+
+
+def _placeholder_value(value: str) -> bool:
+    value = _normalize_text(value).strip(" :")
+
+    if not value:
+        return True
+
+    if PLACEHOLDER_VALUE_RE.match(value):
+        return True
+
+    return False
+
+
+def _remove_empty_fieldsets(soup: BeautifulSoup) -> None:
+    for fieldset in reversed(list(soup.find_all("fieldset"))):
+        if not _is_live_tag(fieldset):
+            continue
+
+        legend = fieldset.find("legend", recursive=False)
+        legend_text = (
+            _normalize_text(legend.get_text(" ", strip=True))
+            if isinstance(legend, Tag)
+            else ""
+        )
+        text = _normalize_text(fieldset.get_text(" ", strip=True))
+        remainder = text.replace(legend_text, "", 1).strip() if legend_text else text
+
+        if not remainder or _is_noise_line(remainder):
+            fieldset.decompose()
+
+
+def _remove_placeholder_only_tables(soup: BeautifulSoup) -> None:
+    for table in reversed(list(soup.find_all("table"))):
+        if not _is_live_tag(table):
+            continue
+
+        rows = []
+
+        for tr in table.find_all("tr"):
+            cells = [
+                _normalize_text(c.get_text(" ", strip=True)).strip()
+                for c in tr.find_all(["td", "th"], recursive=False)
+            ]
+
+            if any(cells):
+                rows.append(cells)
+
+        if not rows:
+            continue
+
+        flat = [c.strip(" :") for row in rows for c in row if c.strip()]
+
+        if not flat:
+            table.decompose()
+            continue
+
+        if _table_has_record_value(table):
+            continue
+
+        value_cells = [
+            c
+            for c in flat
+            if not _placeholder_value(c) and not _looks_like_field_label(c)
+        ]
+        label_cells = [
+            c for c in flat if _looks_like_field_label(c) or _placeholder_value(c)
+        ]
+
+        if not value_cells and label_cells:
+            table.decompose()
+
+
+def _table_has_record_value(table: Tag) -> bool:
+    for cell in table.find_all(["td", "th"]):
+        text = _normalize_text(cell.get_text(" ", strip=True)).strip()
+
+        if not text or _placeholder_value(text) or _looks_like_field_label(text):
+            continue
+
+        if re.search(r"https?://", text, re.I):
+            return True
+
+        if re.search(r"\d{4}-\d{2}-\d{2}|\d{1,2}-[A-Za-z]{3}-\d{4}", text):
+            return True
+
+        if re.search(
+            r"\b\d+(\.\d+)?\s*(mg|mcg|g|kg|mmhg|bpm|%|mmol|mol|l|ml)\b", text, re.I
+        ):
+            return True
+
+        if len(text.split()) >= 5 and re.search(r"[.!?]$", text):
+            return True
+
+        if not _looks_like_generic_label(text):
+            return True
+
+    return False
+
+
+def _looks_like_field_label(text: str) -> bool:
+    text = _normalize_text(text).strip()
+
+    if not text:
+        return False
+
+    if text.endswith(":"):
+        return True
+
+    if (
+        len(text) <= 40
+        and len(text.split()) <= 4
+        and not re.search(r"\d{4}|https?://|[.!?]$", text, re.I)
+    ):
+        return True
+
+    return False
 
 
 def _remove_buttons(soup: BeautifulSoup) -> None:
@@ -499,11 +594,9 @@ def _unwrap_links_keep_visible_text(soup: BeautifulSoup) -> None:
 
         text = _normalize_text(link.get_text(" ", strip=True))
 
-        # A link that is only an icon/control should disappear.
         if not text or UI_NOISE_EXACT_RE.match(text):
             link.decompose()
         else:
-            # Keep visible text like "Cardiology" or "Annual", but remove href/onclick.
             link.unwrap()
 
 
@@ -524,21 +617,6 @@ def _remove_event_and_style_attributes(soup: BeautifulSoup) -> None:
 
 
 def _replace_label_value_blocks(soup: BeautifulSoup) -> None:
-    """
-    Converts common visual label/value layout into a single text node.
-
-    Example:
-        <div>
-            <div class="label">dob</div>
-            1985-04-05
-        </div>
-
-    Becomes:
-        dob: 1985-04-05
-
-    This is generic. It does not search for specific labels like dob/name/etc.
-    """
-
     for tag in reversed(list(soup.find_all(True))):
         if not _is_live_tag(tag):
             continue
@@ -547,6 +625,7 @@ def _replace_label_value_blocks(soup: BeautifulSoup) -> None:
             continue
 
         label_tag = tag.find(class_="label")
+
         if not isinstance(label_tag, Tag):
             continue
 
@@ -561,12 +640,60 @@ def _replace_label_value_blocks(soup: BeautifulSoup) -> None:
         if not _meaningful_value(value):
             continue
 
-        # Avoid flattening large containers that merely contain a nested label/value pair.
         if len(full) > len(label) + len(value) + 20:
             continue
 
         tag.clear()
         tag.append(NavigableString(f"{label}: {value}"))
+
+
+def _remove_heading_only_containers(soup: BeautifulSoup) -> None:
+    panel_re = re.compile(r"(box|panel|card|widget|module|section|summary|tile)", re.I)
+
+    for heading in reversed(list(soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]))):
+        if not _is_live_tag(heading):
+            continue
+
+        if _safe_tag_name(heading) in {"h1", "h2"}:
+            continue
+
+        heading_text = _normalize_text(heading.get_text(" ", strip=True))
+
+        if not heading_text:
+            heading.decompose()
+            continue
+
+        candidate = None
+        parent = heading.parent
+        depth = 0
+
+        while isinstance(parent, Tag) and depth < 5:
+            attrs = (
+                getattr(parent, "attrs", {})
+                if isinstance(getattr(parent, "attrs", None), dict)
+                else {}
+            )
+            classes = attrs.get("class", [])
+
+            if isinstance(classes, str):
+                classes = classes.split()
+
+            attr_text = f"{attrs.get('id', '')} {' '.join(str(c) for c in classes)}"
+
+            if candidate is None and panel_re.search(attr_text):
+                candidate = parent
+
+            parent = parent.parent
+            depth += 1
+
+        if candidate is None:
+            continue
+
+        total_text = _normalize_text(candidate.get_text(" ", strip=True))
+        remainder = total_text.replace(heading_text, "", 1).strip()
+
+        if not remainder or _is_noise_line(remainder):
+            candidate.decompose()
 
 
 def _remove_empty_layout_elements(soup: BeautifulSoup) -> None:
@@ -598,6 +725,7 @@ def _remove_empty_layout_elements(soup: BeautifulSoup) -> None:
             "footer",
             "main",
             "aside",
+            "fieldset",
         }:
             tag.decompose()
 
@@ -644,8 +772,7 @@ def _serialize_node(node: Any) -> list[str]:
         return _list_to_markdown(node, ordered=(name == "ol"))
 
     if name == "li":
-        text = _flatten_text(node)
-        return [f"- {text}"] if text else []
+        return _serialize_li(node)
 
     if name == "pre":
         text = node.get_text("\n", strip=True)
@@ -684,18 +811,69 @@ def _serialize_node(node: Any) -> list[str]:
     return [text] if text else []
 
 
+def _serialize_li(li: Tag) -> list[str]:
+    block_children = [
+        child
+        for child in li.children
+        if isinstance(child, Tag)
+        and _safe_tag_name(child)
+        in {"ul", "ol", "table", "div", "p", "section", "article"}
+    ]
+
+    if not block_children:
+        text = _flatten_text(li)
+        return [f"- {text}"] if text else []
+
+    direct_text_parts = []
+
+    for child in li.children:
+        if isinstance(child, NavigableString):
+            text = _normalize_text(str(child))
+
+            if text:
+                direct_text_parts.append(text)
+
+        elif isinstance(child, Tag) and _safe_tag_name(child) not in BLOCK_TAGS:
+            text = _flatten_text(child)
+
+            if text:
+                direct_text_parts.append(text)
+
+    lines = []
+    direct = _normalize_text(" ".join(direct_text_parts))
+
+    if direct:
+        lines.append(f"- {direct}")
+
+    for child in block_children:
+        lines.extend(_serialize_node(child))
+
+    return lines
+
+
 def _list_to_markdown(tag: Tag, ordered: bool) -> list[str]:
     lines: list[str] = []
     index = 1
 
     for li in tag.find_all("li", recursive=False):
-        text = _flatten_text(li)
+        item_lines = _serialize_li(li)
 
-        if not text:
+        if not item_lines:
             continue
 
-        prefix = f"{index}." if ordered else "-"
-        lines.append(f"{prefix} {text}")
+        first = item_lines[0]
+
+        if first.startswith("- ") or re.match(r"^\d+\.\s", first):
+            lines.append(
+                (f"{index}. " if ordered else "- ") + first[2:]
+                if first.startswith("- ")
+                else first
+            )
+        else:
+            lines.append(f"{index}. {first}" if ordered else f"- {first}")
+
+        for extra in item_lines[1:]:
+            lines.append(extra)
 
         index += 1
 
@@ -708,9 +886,8 @@ def _table_to_markdown(table: Tag) -> list[str]:
     for tr in table.find_all("tr"):
         cells = tr.find_all(["th", "td"], recursive=False)
         row = [_flatten_text(cell) for cell in cells]
-        row = [cell for cell in row if cell]
 
-        if row:
+        if any(row):
             rows.append(row)
 
     if not rows:
@@ -754,10 +931,13 @@ def _postprocess_markdown(markdown: str) -> str:
         lines.append(line)
 
     lines = _collapse_generic_label_value_lines(lines)
+    lines = [line for line in lines if not _is_noise_line(line)]
+    lines = _remove_empty_label_lines(lines)
     lines = _remove_empty_headings(lines)
     lines = _dedupe_adjacent_lines(lines)
 
     text = "\n".join(lines)
+    text = _remove_repeated_document(text)
     text = re.sub(r"\n{3,}", "\n\n", text)
 
     return text.strip()
@@ -765,25 +945,21 @@ def _postprocess_markdown(markdown: str) -> str:
 
 def _clean_markdown_line(line: str) -> str:
     line = str(line or "").replace("\xa0", " ")
-
     line = MARKDOWN_IMAGE_RE.sub("", line)
     line = MARKDOWN_LINK_RE.sub(r"\1", line)
-
     line = (
         line.replace("\\(", "(")
         .replace("\\)", ")")
         .replace("\\[", "[")
         .replace("\\]", "]")
     )
-
     line = re.sub(r"[ \t]+", " ", line).strip()
 
-    # Drop empty Markdown table rows such as "| |".
     if re.fullmatch(r"\|?[\s|]*\|?", line):
         return ""
 
-    # Drop table separator rows like "| --- | --- |".
     plain_table = line.strip().strip("|").strip()
+
     if (
         plain_table
         and "|" in line
@@ -809,11 +985,17 @@ def _is_noise_line(line: str) -> bool:
     if UI_NOISE_EXACT_RE.match(plain):
         return True
 
+    if ":" in line:
+        _left, _right = line.split(":", 1)
+
+        if _placeholder_value(_right):
+            return True
+
     if len(plain) <= 2 and not any(ch.isalnum() for ch in plain):
         return True
 
     if (
-        len(plain) <= 140
+        len(plain) <= 160
         and UI_PHRASE_RE.search(plain)
         and not _looks_like_record_text(plain)
     ):
@@ -823,10 +1005,7 @@ def _is_noise_line(line: str) -> bool:
 
 
 def _looks_like_record_text(text: str) -> bool:
-    """
-    This is not medical-keyword extraction. It simply protects record-like sentences,
-    dates, measurements, URLs, and values from being removed as UI text.
-    """
+    text = _normalize_text(text)
 
     if re.search(r"https?://", text, re.I):
         return True
@@ -838,16 +1017,14 @@ def _looks_like_record_text(text: str) -> bool:
         return True
 
     if re.search(
-        r"\b\d+(\.\d+)?\s*(mg|mcg|g|kg|mmhg|bpm|%|mmol|mol|l|ml)\b",
-        text,
-        re.I,
+        r"\b\d+(\.\d+)?\s*(mg|mcg|g|kg|mmhg|bpm|%|mmol|mol|l|ml)\b", text, re.I
     ):
         return True
 
     if "." in text and len(text.split()) >= 5:
         return True
 
-    if ":" in text and len(text.split()) >= 2:
+    if ":" in text and len(text.split()) >= 2 and not _placeholder_value(text):
         return True
 
     return False
@@ -862,19 +1039,6 @@ def _plain_text_for_filtering(line: str) -> str:
 
 
 def _collapse_generic_label_value_lines(lines: list[str]) -> list[str]:
-    """
-    Converts generic two-line label/value patterns into one line.
-
-    Example:
-        sex
-        M
-
-    Becomes:
-        sex: M
-
-    This intentionally does not use medical-specific labels.
-    """
-
     collapsed: list[str] = []
     index = 0
 
@@ -906,13 +1070,7 @@ def _looks_like_generic_label(line: str) -> bool:
 
     text = re.sub(r"^[-*+]\s*", "", original).strip(" :")
 
-    if not text:
-        return False
-
-    if len(text) > 50:
-        return False
-
-    if len(text.split()) > 5:
+    if not text or len(text) > 50 or len(text.split()) > 5:
         return False
 
     if ":" in text:
@@ -942,13 +1100,10 @@ def _can_be_value_for_label(line: str) -> bool:
 
     text = str(line or "").strip()
 
-    if not text:
+    if not text or _is_noise_line(text):
         return False
 
-    if _is_noise_line(text):
-        return False
-
-    if len(text) > 80:
+    if len(text) > 100:
         return False
 
     if ":" in text:
@@ -960,19 +1115,38 @@ def _can_be_value_for_label(line: str) -> bool:
     return True
 
 
+def _remove_empty_label_lines(lines: list[str]) -> list[str]:
+    output: list[str] = []
+
+    for i, line in enumerate(lines):
+        plain = line.strip()
+        normalized = _plain_text_for_filtering(plain)
+
+        if _is_heading(plain) or _is_table_line(plain):
+            output.append(line)
+            continue
+
+        if re.fullmatch(r"[A-Za-z][A-Za-z0-9 /()_-]{0,40}:?", plain):
+            next_line = lines[i + 1] if i + 1 < len(lines) else ""
+
+            if (
+                not next_line
+                or _is_heading(next_line)
+                or _looks_like_generic_label(next_line)
+                or _is_table_line(next_line)
+                or _is_noise_line(next_line)
+            ):
+                continue
+
+        if normalized in {"assigned issues", "insert position", "from", "to"}:
+            continue
+
+        output.append(line)
+
+    return output
+
+
 def _remove_empty_headings(lines: list[str]) -> list[str]:
-    """
-    Drop headings that have no content before the next heading of the same or higher level.
-
-    This removes empty sections like:
-        ### Allergies
-        ### Medications
-
-    But keeps:
-        ### Consultations
-        - Cardiology ... 06-May-2024
-    """
-
     keep = [True] * len(lines)
 
     for index, line in enumerate(lines):
@@ -1009,6 +1183,31 @@ def _dedupe_adjacent_lines(lines: list[str]) -> list[str]:
         output.append(line)
 
     return output
+
+
+def _remove_repeated_document(text: str) -> str:
+    lines = [line for line in text.splitlines() if line.strip()]
+
+    if len(lines) < 20:
+        return text
+
+    if len(lines) % 2 == 0:
+        half = len(lines) // 2
+
+        if lines[:half] == lines[half:]:
+            return "\n".join(lines[:half])
+
+    first = lines[0]
+
+    for i in range(10, len(lines)):
+        if lines[i] == first:
+            before = lines[:i]
+            after = lines[i : i + len(before)]
+
+            if before == after:
+                return "\n".join(before)
+
+    return text
 
 
 def _is_heading(line: str) -> bool:
