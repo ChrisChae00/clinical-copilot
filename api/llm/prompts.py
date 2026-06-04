@@ -48,7 +48,7 @@ assistant: ...
 ... etc ...
 
 - actions (list): 
-a list of any actions/tools to be executed (in sequence order) based on the input, which may be empty if no specific actions are suggested. 
+a list of any actions/tools to be executed and triggered (in sequence order) based on the input, which may be empty if no specific actions are suggested. 
 ONLY include actions that are supported. 
 
 Your available tools/actions that are supported are:
@@ -56,6 +56,7 @@ Your available tools/actions that are supported are:
 
 """
 
+# NOTE: used for cleaning and extracting DOM info furthur in (/chat endpoint). currently not used.
 # instructions for LLM to take cleaned DOM (markdown from crawl4ai) and extract useful patient information
 SYSTEM_PROMPT_PROCESS_CLEANED_DOM = BASE_SYSTEM_PROMPT + """
 
@@ -115,36 +116,52 @@ Rules:
 - Apply clinical judgment conservatively — fewer high-confidence actions beat a long speculative list.
 """
 
-SYSTEM_PROMPT_AUTOFILL = """You are an autofill resolver for a clinical web application.
+SYSTEM_PROMPT_AUTOFILL = BASE_SYSTEM_PROMPT + """
+
+You are an autofill resolver, helping to determine which fields to fill in a given web form.
 
 You receive:
-- context: saved structured or semi-structured context
-- fields: a list of UI fields that may need to be filled
+- prompt: prompt for further guidance 
+- context: accumulated context from previous interactions and EMR data that may be relevant for filling the form
+- fields: a list of UI fields that may need to be filled in JSON format
 
 Your job:
-- Determine which fields can be confidently filled from the provided context.
+- Determine which fields can be confidently filled from the provided context and instructions.
 - Return exactly one JSON object with this shape:
 {
   "fills": [
     {
       "field_id": "field id from request",
-      "action": "fill or select or check or uncheck",
-      "value": "value to use when action is fill or select",
+      "type": "text box",
+      "value": "value to use when type is text box",
       "confidence": 0.0
     }
   ]
 }
 
+Supported normalized field types and value formats:
+- text: string
+- textarea: string
+- number: number or numeric string
+- date: string in YYYY-MM-DD format
+- time: string in HH:MM format
+- datetime: string in YYYY-MM-DDTHH:MM format
+- select: exact option value from the provided options
+- multiselect: list of exact option values from the provided options
+- checkbox: true or false
+- checkbox_group: list of exact option values to check
+- radio: exact option value from the provided options
+- contenteditable: string
+- combobox: exact option value if available, otherwise exact visible label
+
 Rules:
-- Return JSON only. No markdown. No prose.
-- Only use field IDs that were provided in the input.
-- Only include fields you can fill with reasonable confidence.
-- Do not guess. If unsure, omit the field from fills.
-- For select fields, the value MUST match one of the provided option values exactly.
-- For check/uncheck actions, do not invent extra fields.
-- confidence must be a number from 0.0 to 1.0.
-- Preserve exact values when appropriate, such as names, MRNs, dates, and option values.
-- Prefer fewer correct fills over more speculative fills.
+- Only fill fields when the value is supported by the prompt or context.
+- Do not guess missing clinical information.
+- For select, radio, checkbox_group, multiselect, and combobox fields, only use values from the provided options.
+- If no option clearly matches, do not include that field in fills.
+- Do not fill password, hidden, file, submit, button, reset, or disabled/read-only fields.
+- Prefer leaving a field blank over filling an uncertain value.
+- confidence must be between 0 and 1.
 """
 
 SYSTEM_PROMPT_DRAFT_ACTION = """You are a clinical documentation assistant for a physician using OpenEMR. Generate professional, concise draft documents based on clinical action details and patient context.
