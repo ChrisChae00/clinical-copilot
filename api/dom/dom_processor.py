@@ -4,7 +4,8 @@ import html as html_lib
 import re
 from typing import Any
 
-from bs4 import BeautifulSoup, Comment, NavigableString, Tag
+from bs4 import BeautifulSoup, Comment, Tag
+from bs4.element import NavigableString
 
 DROP_TAGS = {
     "script",
@@ -159,6 +160,8 @@ async def clean_dom(raw_html: str) -> str:
     - Keeps headings, lists, tables, label/value structure, populated summaries, and active textarea content.
     - Returns Markdown.
     """
+
+    print("dom_processor.clean_dom called with raw_html of length", len(raw_html))
 
     if not isinstance(raw_html, str) or not raw_html.strip():
         raise ValueError("html must be a non-empty string")
