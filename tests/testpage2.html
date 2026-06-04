@@ -1,0 +1,2652 @@
+<html>
+  <head>
+    <base href="http://localhost:8080/oscar/" />
+    <title>Deval Patel Lab Results</title>
+
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="all"
+      href="/oscar/library/jquery/jquery-ui.theme-1.12.1.min.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="all"
+      href="/oscar/library/jquery/jquery-ui-1.12.1.min.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="all"
+      href="/oscar/library/jquery/jquery-ui.structure-1.12.1.min.css"
+    />
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="/oscar/share/javascript/Oscar.js"
+    ></script>
+    <script type="text/javascript" src="/oscar/js/global.js"></script>
+    <script
+      type="text/javascript"
+      src="/oscar/library/jquery/jquery-1.12.0.min.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="/oscar/library/jquery/jquery-ui-1.12.1.min.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="/oscar/share/javascript/jquery/jquery.form.js"
+    ></script>
+
+    <script type="text/javascript" charset="utf-8">
+      var contextpath = "/oscar";
+      const ctx = contextpath;
+    </script>
+
+    <script language="javascript" type="text/javascript">
+      // alternately refer to this function in oscarMDSindex.js as labDisplayAjax.jsp does
+      function updateLabDemoStatus(labno) {
+        if (document.getElementById("DemoTable" + labno)) {
+          document.getElementById("DemoTable" + labno).style.backgroundColor =
+            "#FFF";
+        }
+      }
+    </script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="/oscar/share/css/OscarStandardLayout.css"
+    />
+    <style type="text/css">
+      <!-- .RollRes {
+        font-weight: 700;
+        font-size: 8pt;
+        color: white;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .RollRes a:link {
+        color: white;
+      }
+
+      .RollRes a:hover {
+        color: white;
+      }
+
+      .RollRes a:visited {
+        color: white;
+      }
+
+      .RollRes a:active {
+        color: white;
+      }
+
+      .AbnormalRollRes {
+        font-weight: 700;
+        font-size: 8pt;
+        color: red;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .AbnormalRollRes a:link {
+        color: red;
+      }
+
+      .AbnormalRollRes a:hover {
+        color: red;
+      }
+
+      .AbnormalRollRes a:visited {
+        color: red;
+      }
+
+      .AbnormalRollRes a:active {
+        color: red;
+      }
+
+      .CorrectedRollRes {
+        font-weight: 700;
+        font-size: 8pt;
+        color: yellow;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .CorrectedRollRes a:link {
+        color: yellow;
+      }
+
+      .CorrectedRollRes a:hover {
+        color: yellow;
+      }
+
+      .CorrectedRollRes a:visited {
+        color: yellow;
+      }
+
+      .CorrectedRollRes a:active {
+        color: yellow;
+      }
+
+      .AbnormalRes {
+        font-weight: bold;
+        font-size: 8pt;
+        color: red;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .AbnormalRes a:link {
+        color: red;
+      }
+
+      .AbnormalRes a:hover {
+        color: red;
+      }
+
+      .AbnormalRes a:visited {
+        color: red;
+      }
+
+      .AbnormalRes a:active {
+        color: red;
+      }
+
+      .NormalRes {
+        font-weight: bold;
+        font-size: 8pt;
+        color: black;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .TDISRes {
+        font-weight: bold;
+        font-size: 10pt;
+        color: black;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .NormalRes a:link {
+        color: black;
+      }
+
+      .NormalRes a:hover {
+        color: black;
+      }
+
+      .NormalRes a:visited {
+        color: black;
+      }
+
+      .NormalRes a:active {
+        color: black;
+      }
+
+      .HiLoRes {
+        font-weight: bold;
+        font-size: 8pt;
+        color: blue;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .HiLoRes a:link {
+        color: blue;
+      }
+
+      .HiLoRes a:hover {
+        color: blue;
+      }
+
+      .HiLoRes a:visited {
+        color: blue;
+      }
+
+      .HiLoRes a:active {
+        color: blue;
+      }
+
+      .CorrectedRes {
+        font-weight: bold;
+        font-size: 8pt;
+        color: #e000d0;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .CorrectedRes a:link {
+        color: #6da997;
+      }
+
+      .CorrectedRes a:hover {
+        color: #6da997;
+      }
+
+      .CorrectedRes a:visited {
+        color: #6da997;
+      }
+
+      .CorrectedRes a:active {
+        color: #6da997;
+      }
+
+      .Field {
+        font-weight: bold;
+        font-size: 8.5pt;
+        color: black;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .NarrativeRes {
+        font-weight: 700;
+        font-size: 10pt;
+        color: black;
+        font-family:
+          Courier New,
+          Courier,
+          mono;
+      }
+
+      div.Field a:link {
+        color: black;
+      }
+
+      div.Field a:hover {
+        color: black;
+      }
+
+      div.Field a:visited {
+        color: black;
+      }
+
+      div.Field a:active {
+        color: black;
+      }
+
+      .Field2 {
+        font-weight: bold;
+        font-size: 8pt;
+        color: #ffffff;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      div.Field2 {
+        font-weight: bold;
+        font-size: 8pt;
+        color: #ffffff;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      div.FieldData {
+        font-weight: normal;
+        font-size: 8pt;
+        color: black;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      div.Field3 {
+        font-weight: normal;
+        font-size: 8pt;
+        color: black;
+        font-style: italic;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      div.Title {
+        font-weight: 800;
+        font-size: 10pt;
+        color: white;
+        font-family: Verdana, Arial, Helvetica;
+        padding-top: 4pt;
+        padding-bottom: 2pt;
+      }
+
+      div.Title a:link {
+        color: white;
+      }
+
+      div.Title a:hover {
+        color: white;
+      }
+
+      div.Title a:visited {
+        color: white;
+      }
+
+      div.Title a:active {
+        color: white;
+      }
+
+      div.Title2 {
+        font-weight: bolder;
+        font-size: 9pt;
+        color: black;
+        text-indent: 5pt;
+        font-family: Verdana, Arial, Helvetica;
+        padding: 10pt 15pt 2pt 2pt;
+      }
+
+      div.Title2 a:link {
+        color: black;
+      }
+
+      div.Title2 a:hover {
+        color: black;
+      }
+
+      div.Title2 a:visited {
+        color: black;
+      }
+
+      div.Title2 a:active {
+        color: black;
+      }
+
+      .Cell {
+        background-color: #9999cc;
+        border-left: thin solid #ccccff;
+        border-right: thin solid #6666cc;
+        border-top: thin solid #ccccff;
+        border-bottom: thin solid #6666cc;
+      }
+
+      .Cell2 {
+        background-color: #376c95;
+        border-left-style: none;
+        border-left-width: medium;
+        border-right-style: none;
+        border-right-width: medium;
+        border-top: thin none #bfcbe3;
+        border-bottom-style: none;
+        border-bottom-width: medium;
+      }
+
+      .Cell3 {
+        background-color: #add9c7;
+        border-left: thin solid #dbfdeb;
+        border-right: thin solid #5d9987;
+        border-top: thin solid #dbfdeb;
+        border-bottom: thin solid #5d9987;
+      }
+
+      .CellHdr {
+        background-color: #cbe5d7;
+        border-right-style: none;
+        border-right-width: medium;
+        border-bottom-style: none;
+        border-bottom-width: medium;
+      }
+
+      .Nav {
+        font-weight: bold;
+        font-size: 8pt;
+        color: black;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      .PageLink a:link {
+        font-size: 8pt;
+        color: white;
+      }
+
+      .PageLink a:hover {
+        color: red;
+      }
+
+      .PageLink a:visited {
+        font-size: 9pt;
+        color: yellow;
+      }
+
+      .PageLink a:active {
+        font-size: 12pt;
+        color: yellow;
+      }
+
+      .PageLink {
+        font-family: Verdana;
+      }
+
+      .text1 {
+        font-size: 8pt;
+        color: black;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      div.txt1 {
+        font-size: 8pt;
+        color: black;
+        font-family: Verdana, Arial;
+      }
+
+      div.txt2 {
+        font-weight: bolder;
+        font-size: 6pt;
+        color: black;
+        font-family: Verdana, Arial;
+      }
+
+      div.Title3 {
+        font-weight: bolder;
+        font-size: 12pt;
+        color: black;
+        font-family: Verdana, Arial;
+      }
+
+      .red {
+        color: red;
+      }
+
+      .text2 {
+        font-size: 7pt;
+        color: black;
+        font-family: Verdana, Arial;
+      }
+
+      .white {
+        color: white;
+      }
+
+      .title1 {
+        font-size: 9pt;
+        color: black;
+        font-family: Verdana, Arial;
+      }
+
+      div.Title4 {
+        font-weight: 600;
+        font-size: 8pt;
+        color: white;
+        font-family: Verdana, Arial, Helvetica;
+      }
+
+      pre {
+        display: block;
+        font-family: Verdana, Arial, Helvetica;
+        white-space: -moz-pre-space;
+        margin: 0px;
+        font-size: x-small;
+        font-weight: 600;
+      }
+
+      -- > input[type="button"],
+      button,
+      input[id^="acklabel_"] {
+        font-size: 12px !important;
+        padding: 0px;
+      }
+
+      #ticklerWrap {
+        position: relative;
+        top: 0px;
+        background-color: #ff6600;
+        width: 100%;
+      }
+
+      .completedTickler {
+        opacity: 0.8;
+        filter: alpha(opacity=80); /* For IE8 and earlier */
+      }
+
+      @media print {
+        .DoNotPrint {
+          display: none;
+        }
+      }
+    </style>
+
+    <style>
+      /* Dropdown Button */
+      .dropbtn {
+        /*  background-color: #4CAF50;
+              color: white;
+              padding: 16px;
+              font-size: 16px;
+              border: none;*/
+      }
+
+      /* The container <div> - needed to position the dropdown content */
+      .dropdown {
+        position: relative;
+        display: inline-block;
+      }
+
+      /* Dropdown Content (Hidden by Default) */
+      .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #f1f1f1;
+        min-width: 160px;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+      }
+
+      /* Links inside the dropdown */
+      .dropdown-content a {
+        color: black;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+      }
+
+      /* Change color of dropdown links on hover */
+      .dropdown-content a:hover {
+        background-color: #ddd;
+      }
+
+      /* Show the dropdown menu on hover */
+      .dropdown:hover .dropdown-content {
+        display: block;
+      }
+
+      /* Change the background color of the dropdown button when the dropdown content is shown */
+      .dropdown:hover .dropbtn {
+        background-color: #3e8e41;
+      }
+
+      #labVersionInfoModal .modal-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+
+      #labVersionInfoModal .info-section {
+        margin-bottom: 20px;
+      }
+
+      #labVersionInfoModal .info-section p {
+        margin: 5px 0;
+        color: #555;
+      }
+
+      #labVersionInfoModal .test-list {
+        margin-left: 10px;
+      }
+
+      #labVersionInfoModal .test-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 5px 0;
+      }
+
+      #labVersionInfoModal .status {
+        font-weight: bold;
+      }
+
+      /* White background and shadow for fileDialog and combinedAckFileDialog */
+      .ui-dialog:has(#fileDialog),
+      .ui-dialog:has(#combinedAckFileDialog) {
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+      }
+
+      /* Center Submit/Cancel buttons for both dialogs */
+      /* .ui-dialog:has(#fileDialog) .ui-dialog-buttonpane, */
+      .ui-dialog:has(#combinedAckFileDialog) .ui-dialog-buttonpane {
+        text-align: center;
+      }
+      /* .ui-dialog:has(#fileDialog) .ui-dialog-buttonset, */
+      .ui-dialog:has(#combinedAckFileDialog) .ui-dialog-buttonset {
+        float: none;
+        display: inline-block;
+      }
+
+      /* Primary color for Submit button in combinedAckFileDialog */
+      #combinedAckOkButton.ui-button {
+        background: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+      }
+      #combinedAckOkButton.ui-button:hover {
+        background: #0b5ed7;
+        border-color: #0a58ca;
+      }
+
+      /* Accordion border on expanded content panel */
+      #combinedAckAccordion .ui-accordion-content {
+        border: 1px solid #dee2e6;
+      }
+
+      /* Keep accordion header color unchanged when active/focused */
+      #combinedAckAccordion .ui-accordion-header,
+      #combinedAckAccordion .ui-accordion-header.ui-state-active,
+      #combinedAckAccordion .ui-accordion-header:hover {
+        color: inherit;
+        background: #e9ecef;
+        border-color: #dee2e6;
+      }
+
+      /* Prevent icon from turning white on active/hover (designed for dark backgrounds) */
+      #combinedAckAccordion .ui-accordion-header.ui-state-active .ui-icon,
+      #combinedAckAccordion .ui-accordion-header:hover .ui-icon {
+        filter: brightness(0);
+      }
+    </style>
+
+    <script language="JavaScript">
+      var labNo = "160";
+      var providerNo = "999998";
+      var demographicNo = "1";
+
+      function popupStart(vheight, vwidth, varpage, windowname) {
+        var page = varpage;
+        windowprops =
+          "height=" +
+          vheight +
+          ",width=" +
+          vwidth +
+          ",location=no,scrollbars=yes,menubars=no,toolbars=no,resizable=yes";
+        var popup = window.open(varpage, windowname, windowprops);
+      }
+
+      function getComment(action, segmentId) {
+        var ret = true;
+        var comment = "";
+        var text = providerNo + "_" + segmentId + "commentText";
+        var textEl = document.getElementById(text);
+        if (textEl != null) {
+          comment = textEl.innerHTML;
+          if (comment == null) {
+            comment = "";
+          }
+        }
+        var commentVal = prompt(
+          "Please enter a comment (max. 255 characters)",
+          comment,
+        );
+
+        var ackForm = document.forms["acknowledgeForm_" + segmentId];
+        if (commentVal == null) {
+          ret = false;
+        } else if (ackForm && ackForm.comment) {
+          if (commentVal.length > 0) {
+            ackForm.comment.value = commentVal;
+          } else {
+            ackForm.comment.value = comment;
+          }
+        }
+
+        if (ret) handleLab("acknowledgeForm_" + segmentId, segmentId, action);
+
+        return false;
+      }
+
+      function printPDF(labid) {
+        var frm = "acknowledgeForm_" + labid;
+        var form = document.forms[frm];
+        if (form) {
+          form.action = "lab/CA/ALL/PrintPDF.do";
+          form.submit();
+        }
+      }
+
+      function linkreq(rptId, reqId) {
+        var link =
+          "/oscar/lab/LinkReq.jsp?table=hl7TextMessage&rptid=" +
+          rptId +
+          "&reqid=" +
+          reqId +
+          "&demographicNo=1";
+        window.open(link, "linkwin", "width=500, height=200");
+      }
+
+      function matchMe() {}
+
+      function handleLab(formid, labid, action) {
+        var url = "/oscar/documentManager/inboxManage.do";
+        var data = "method=isLabLinkedToDemographic&labid=" + labid;
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: data,
+        })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (json) {
+            if (json != null) {
+              var success = json.isLinkedToDemographic;
+              var demoid = "";
+              //check if lab is linked to a providers
+              if (success) {
+                console.log("Lab IS linked to demographic: " + success);
+                console.log("Processing action: " + action);
+
+                if (action === "ackLab") {
+                  console.log("Acknowledging lab results");
+                  if (confirmAck()) {
+                    console.log("Acknowledge confirmed. Labid: " + labid);
+                    document.getElementById("labStatus_" + labid).value = "A";
+                    updateStatus(formid, labid);
+                  }
+                } else if (action === "msgLab") {
+                  console.log("Sending message about lab. Demoid: " + demoid);
+                  demoid = json.demoId;
+                  if (demoid != null && demoid.length > 0) {
+                    window.popup(
+                      700,
+                      960,
+                      "/oscar/messenger/SendDemoMessage.do?demographic_no=" +
+                        demoid,
+                      "msg",
+                    );
+                  }
+                } else if (action === "msgLabRecall") {
+                  demoid = json.demoId;
+                  if (demoid != null && demoid.length > 0) {
+                    window.popup(
+                      700,
+                      980,
+                      "/oscar/messenger/SendDemoMessage.do?demographic_no=" +
+                        demoid +
+                        "&recall",
+                      "msgRecall",
+                    );
+                    window.popup(
+                      450,
+                      600,
+                      "/oscar/tickler/ForwardDemographicTickler.do?docType=HL7&docId=" +
+                        labid +
+                        "&demographic_no=" +
+                        demoid +
+                        "&priority=&recall",
+                      "ticklerRecall",
+                    );
+                  }
+                } else if (action === "ticklerLab") {
+                  console.log(
+                    "Setting lab Tickler. Labid: " +
+                      labid +
+                      " Demoid: " +
+                      demoid,
+                  );
+                  demoid = json.demoId;
+                  if (demoid != null && demoid.length > 0) {
+                    window.popup(
+                      450,
+                      600,
+                      "/oscar/tickler/ForwardDemographicTickler.do?docType=HL7&docId=" +
+                        labid +
+                        "&demographic_no=" +
+                        demoid,
+                      "tickler",
+                    );
+                  }
+                } else if (action === "addComment") {
+                  console.log(
+                    "Adding comment. Formid: " + formid + " labid: " + labid,
+                  );
+                  addComment(formid, labid);
+                }
+              } else {
+                console.log("Lab is NOT linked to demographic: " + success);
+                console.log("Processing action: " + action);
+
+                if (action === "ackLab") {
+                  if (confirmAckUnmatched()) {
+                    document.getElementById("labStatus_" + labid).value = "A";
+                    updateStatus(formid, labid);
+                  } else {
+                    matchMe();
+                  }
+                } else {
+                  alert("Please relate lab to a patient");
+                  matchMe();
+                }
+              }
+            }
+          });
+      }
+
+      function confirmAck() {
+        return true;
+      }
+
+      function confirmCommentUnmatched() {
+        return confirm(
+          "This lab has not been matched to a patient.Are you sure you want to acknowledge it?OK to acknowledge and Cancel to match to a patient",
+        );
+      }
+
+      function confirmAckUnmatched() {
+        return confirm(
+          "This lab has not been matched to a patient.Are you sure you want to acknowledge it?OK to acknowledge and Cancel to match to a patient",
+        );
+      }
+
+      function unlinkDemographic(labNo) {
+        var reason = "Incorrect demographic";
+        reason = prompt("Please enter a reason (max. 255 characters)", reason);
+
+        //must include reason
+        if (reason == null || reason.length === 0) {
+          return false;
+        }
+
+        var urlStr = "/oscar" + "/lab/CA/ALL/UnlinkDemographic.do";
+        var dataStr =
+          "reason=" + encodeURIComponent(reason) + "&labNo=" + labNo;
+        fetch(urlStr, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: dataStr,
+        })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
+            if (data.success) {
+              // refresh the opening page with new results
+              top.opener.location.reload();
+              // refresh the lab display page and offer dialog to rematch.
+              window.location.reload();
+            }
+          });
+      }
+
+      function addComment(formid, labid) {
+        var url = "/oscar" + "/oscarMDS/UpdateStatus.do?method=addComment";
+
+        var labStatusEl = document.getElementById("labStatus_" + labid);
+        if (labStatusEl && labStatusEl.value === "") {
+          labStatusEl.value = "N";
+        }
+
+        var formEl = document.getElementById(formid);
+        if (!formEl) {
+          console.error("Form not found: " + formid);
+          return;
+        }
+        var data = new URLSearchParams(new FormData(formEl)).toString();
+        console.log(url);
+        console.log(data);
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: data,
+        }).then(function () {
+          window.location.reload();
+        });
+      }
+
+      function submitLabel(lblval, segmentID) {
+        var ackForm = document.forms["acknowledgeForm_" + segmentID];
+        var tdisForm = document.forms["TDISLabelForm_" + segmentID];
+        if (ackForm && ackForm.label && tdisForm && tdisForm.label) {
+          let newlabelvalue = ackForm.label.value;
+          if (newlabelvalue.length > 1) {
+            tdisForm.label.value = newlabelvalue;
+          }
+        }
+      }
+
+      jQuery(document).ready(function () {
+        // "Acknowledge/File Document" modal checkbox handler (Acknowledge button flow).
+        // Keeps "Select All" in sync with individual provider checkboxes.
+        // The OK button is always enabled â the provider can acknowledge without selecting anyone.
+        jQuery(document).on(
+          "change",
+          ".combinedAckProviderCheckbox, #combinedAckSelectAllCheckbox",
+          function () {
+            if (this.id === "combinedAckSelectAllCheckbox") {
+              jQuery(
+                ".combinedAckProviderCheckbox:not(.combined-disabled-checkbox)",
+              ).prop("checked", this.checked);
+            }
+          },
+        );
+
+        // "File Document" dialog checkbox handler ("File for..." button flow).
+        // Keeps "Select All" in sync with individual provider checkboxes.
+        // The OK button stays disabled until at least one provider is checked,
+        // because filing requires an explicit provider target.
+        jQuery(document).on(
+          "change",
+          ".ackProviderCheckbox, #ackSelectAllCheckbox",
+          function () {
+            if (this.id === "ackSelectAllCheckbox") {
+              jQuery(".ackProviderCheckbox:not(.disabled-checkbox)").prop(
+                "checked",
+                this.checked,
+              );
+            }
+            const hasChecked =
+              jQuery(".ackProviderCheckbox:checked").length > 0;
+            jQuery("#fileDialogOkButton").button(
+              "option",
+              "disabled",
+              !hasChecked,
+            );
+          },
+        );
+
+        // Accordion for "File Document" section in combinedAckFileDialog.
+        // Expanded by default when the lab is linked to other providers (isHl7OfferFileForOthers=true), collapsed otherwise.
+        jQuery("#combinedAckAccordion").accordion({
+          collapsible: true,
+          active:
+            jQuery("#isHl7OfferFileForOthers").val() === "true" ? 0 : false,
+          heightStyle: "content",
+        });
+
+        // Submit the dialog when Enter is pressed in the comment input.
+        jQuery("#combinedAckComment").on("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            jQuery("#combinedAckOkButton").trigger("click");
+          }
+        });
+      });
+
+      // Entry point for both the "Acknowledge" button (isFileOnly=false) and
+      // the "File for..." button (isFileOnly=true). Routes to the correct dialog.
+      //
+      // isFileOnly=true  â "File for..." button:
+      //   The logged-in provider has already acknowledged. Opens the "File Document"
+      //   dialog (#fileDialog) so they can file on behalf of other providers.
+      //
+      // isFileOnly=false â "Acknowledge" button:
+      //   If skipComment=true: acknowledges directly via #tempAckBtn without any prompt.
+      //   Otherwise (skipComment=false): opens the combined "Acknowledge/File Document"
+      //   modal so the provider can enter a comment. When isHl7OfferFileForOthers=true,
+      //   the modal also allows optionally filing for other linked providers.
+      function openFileDialog(isFileOnly, segmentId, labType) {
+        if (isFileOnly) {
+          openFileOnlyDialog(segmentId, labType);
+          return;
+        }
+        if (jQuery("#skipAckComment").val() === "true") {
+          jQuery("#tempAckBtn").click();
+          return;
+        }
+        openCombinedAckFileDialog(false, segmentId, labType);
+      }
+
+      // Opens the "File Document" dialog (#fileDialog) for the "File for..." button flow.
+      // Reached only when the logged-in provider has already acknowledged the lab and at
+      // least one other linked provider has not yet filed or acknowledged.
+      //
+      // The provider selects one or more providers from the list and confirms. FileLabs.do
+      // is called for each selected provider in parallel, then the page reloads to reflect
+      // the updated filing status. The OK button starts disabled and enables only once
+      // at least one provider is checked.
+      function openFileOnlyDialog(segmentId, labType) {
+        jQuery("#fileDialog")
+          .dialog({
+            autoOpen: false,
+            modal: true,
+            height: "auto",
+            width: "auto",
+            resizable: true,
+            buttons: [
+              {
+                text: "No",
+                click: function () {
+                  jQuery("#fileDialog").dialog("close");
+                },
+              },
+              {
+                text: "Yes",
+                id: "fileDialogOkButton",
+                click: function () {
+                  const selectedProviders = jQuery(
+                    ".ackProviderCheckbox:checked",
+                  )
+                    .map(function () {
+                      return jQuery(this).val();
+                    })
+                    .get();
+                  jQuery("#fileDialog").dialog("close");
+                  fileOnBehalfOfMultipleProviders(
+                    selectedProviders,
+                    segmentId,
+                    labType,
+                  ).then(function () {
+                    location.reload();
+                  });
+                },
+                disabled: true,
+              },
+            ],
+          })
+          .dialog("open");
+      }
+
+      // Opens the "Acknowledge/File Document" modal (#combinedAckFileDialog).
+      // Used when the logged-in provider clicks "Acknowledge" and has opted in to
+      // offer filing for others (isHl7OfferFileForOthers=true).
+      //
+      // Combines two actions into a single step:
+      //   1. Enter an acknowledgement comment (pre-populated if one already exists).
+      //   2. Optionally select other linked providers to file the result on their behalf.
+      //
+      // OK button behaviour:
+      //   - Providers selected: files for each via FileLabs.do, then acknowledges.
+      //   - No providers selected: acknowledges with the entered comment directly.
+      //   - Cancel: closes the modal without acknowledging or filing.
+      function openCombinedAckFileDialog(isFileOnly, segmentId, labType) {
+        // Pre-populate the comment field with any comment the provider has already saved for this lab.
+        const textEl = document.getElementById(
+          providerNo + "_" + segmentId + "commentText",
+        );
+        jQuery("#combinedAckComment").val(textEl ? textEl.innerHTML : "");
+
+        // Persist isFileOnly on the dialog element so the checkbox change handler can read it
+        // without it needing to be in scope as a closure variable.
+        jQuery("#combinedAckFileDialog").data("isFileOnly", isFileOnly);
+
+        jQuery("#combinedAckFileDialog")
+          .dialog({
+            autoOpen: false,
+            modal: true,
+            height: "auto",
+            minWidth: 700,
+            resizable: true,
+            buttons: [
+              {
+                text: "Submit",
+                id: "combinedAckOkButton",
+                click: function () {
+                  const selectedProviders = jQuery(
+                    ".combinedAckProviderCheckbox:checked",
+                  )
+                    .map(function () {
+                      return jQuery(this).val();
+                    })
+                    .get();
+                  const comment = jQuery("#combinedAckComment").val();
+
+                  jQuery("#combinedAckFileDialog").dialog("close");
+
+                  if (selectedProviders.length > 0) {
+                    // File on behalf of selected providers, then acknowledge if needed.
+                    fileOnBehalfOfMultipleProviders(
+                      selectedProviders,
+                      segmentId,
+                      labType,
+                    ).then(function () {
+                      if (!isFileOnly) {
+                        acknowledgeWithComment(comment, segmentId);
+                      } else {
+                        location.reload();
+                      }
+                    });
+                  } else if (!isFileOnly) {
+                    // No providers selected â just acknowledge with the entered comment.
+                    acknowledgeWithComment(comment, segmentId);
+                  }
+                },
+                // Require at least one provider when filing only; always enabled when acknowledging.
+                disabled: isFileOnly,
+              },
+              {
+                text: "Cancel",
+                click: function () {
+                  jQuery("#combinedAckFileDialog").dialog("close");
+                },
+              },
+            ],
+          })
+          .dialog("open");
+
+        jQuery("#combinedAckComment").focus();
+      }
+
+      // Writes the acknowledgement comment into the lab's hidden form field and triggers
+      // the acknowledge action. Called from the combined modal after the provider confirms.
+      function acknowledgeWithComment(comment, segmentId) {
+        const ackForm = document.forms["acknowledgeForm_" + segmentId];
+        if (ackForm && ackForm.comment) {
+          ackForm.comment.value = comment;
+        }
+        handleLab("acknowledgeForm_" + segmentId, segmentId, "ackLab");
+      }
+
+      // Files the lab result on behalf of each provider in selectedProviders by calling
+      // FileLabs.do for each one. Called from both the "File Document" dialog (#fileDialog)
+      // and the "Acknowledge/File Document" modal (#combinedAckFileDialog).
+      //
+      // For each provider, an auto-generated comment is recorded that includes the logged-in
+      // provider's name, the target provider's name, and a timestamp.
+      //
+      // All requests run in parallel via Promise.allSettled, so a failure for one provider
+      // does not block the others. Individual failures are logged to the console.
+      // The returned promise always resolves, allowing the caller to proceed with the next
+      // step (acknowledge or page reload) regardless of individual filing outcomes.
+      //
+      // @param {string[]} selectedProviders - provider numbers to file the lab on behalf of
+      function fileOnBehalfOfMultipleProviders(
+        selectedProviders,
+        segmentId,
+        labType,
+      ) {
+        if (!selectedProviders || selectedProviders.length === 0) {
+          return Promise.reject(new Error("No providers selected"));
+        }
+
+        const flaggedLabId = segmentId;
+        const loggedInProviderNo = jQuery("#loggedInProviderNo").val();
+        const loggedInProviderName = jQuery("#loggedInProviderName").val();
+
+        const ajaxCalls = selectedProviders.map((providerNo) => {
+          const providerName = jQuery(
+            ".combinedAckProviderName[data-provider-no='" +
+              providerNo +
+              "'], .ackProviderName[data-provider-no='" +
+              providerNo +
+              "']",
+          )
+            .first()
+            .val();
+          const comment = createFilingComment(
+            providerName,
+            loggedInProviderName,
+          );
+          const url = "\/oscar" + "/oscarMDS/FileLabs.do";
+
+          return new Promise((resolve, reject) => {
+            jQuery.ajax({
+              url: url,
+              type: "POST",
+              data: {
+                method: "fileOnBehalfOfMultipleProviders",
+                providerNo: providerNo,
+                flaggedLabId: flaggedLabId,
+                labType: labType,
+                comment: comment,
+                fileUpToLabNo: true,
+              },
+              success: function (response) {
+                console.log("Filed lab for provider: " + providerNo);
+                resolve(response);
+              },
+              error: function (xhr) {
+                console.error("Failed filing for provider: " + providerNo);
+                reject(new Error("Failed for provider: " + providerNo));
+              },
+            });
+          });
+        });
+
+        return Promise.allSettled(ajaxCalls).then((results) => {
+          const failed = results.filter((r) => r.status === "rejected");
+          if (failed.length > 0) {
+            console.error("Some AJAX calls failed:", failed);
+          }
+        });
+      }
+
+      // Generates the auto-filing comment recorded when a lab is filed on behalf of another provider.
+      // Produces: "Filed by <loggedInProviderName> on behalf of <providerName> on YYYY.MM.DD @ H:MMam/pm"
+      //
+      // @param {string} providerName         - name of the provider being filed for
+      // @param {string} loggedInProviderName - name of the provider performing the filing
+      function createFilingComment(providerName, loggedInProviderName) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        let hours = now.getHours();
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12 || 12;
+        const formattedDate =
+          yyyy + "." + mm + "." + dd + " @ " + hours + ":" + minutes + ampm;
+
+        return (
+          "Filed by " +
+          loggedInProviderName +
+          " on behalf of " +
+          providerName +
+          " on " +
+          formattedDate
+        );
+      }
+    </script>
+  </head>
+
+  <body onload="javascript: matchMe();">
+    <!-- form forwarding of the lab -->
+
+    <script type="text/javascript">
+      jQuery(function () {
+        jQuery("#createLabel_160").click(function () {
+          jQuery.ajax({
+            type: "POST",
+            url: "/oscar" + "/lab/CA/ALL/createLabelTDIS.do",
+            dataType: "json",
+            data: {
+              lab_no: jQuery("#labNum_160").val(),
+              accessionNum: jQuery("#accNum").val(),
+              label: jQuery("#label_160").val(),
+              ajaxcall: true,
+            },
+          });
+          jQuery("#labelspan_160 i").text(jQuery("#label_160").val());
+          var ackForm = document.forms["acknowledgeForm_160"];
+          if (ackForm && ackForm.label) ackForm.label.value = "";
+        });
+      });
+
+      var _in_window = true;
+      var contextpath = "/oscar";
+    </script>
+
+    <script>
+      //first check to see if lab is linked, if it is, we can send the demographicNo to the macro
+      function runMacro(name, formid, closeOnSuccess) {
+        var url = "/oscar/documentManager/inboxManage.do";
+        var data = "method=isLabLinkedToDemographic&labid=160";
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: data,
+        })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (json) {
+            if (json != null) {
+              var success = json.isLinkedToDemographic;
+              var demoid = "";
+              if (success) {
+                demoid = json.demoId;
+              }
+              runMacroInternal(name, formid, closeOnSuccess, demoid);
+            }
+          });
+      }
+
+      function runMacroInternal(name, formid, closeOnSuccess, demographicNo) {
+        var url =
+          "/oscar" +
+          "/oscarMDS/RunMacro.do?name=" +
+          name +
+          (demographicNo.length > 0 ? "&demographicNo=" + demographicNo : "");
+        var formEl = document.getElementById(formid);
+        var data = new URLSearchParams(new FormData(formEl)).toString();
+
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: data,
+        }).then(function () {
+          if (closeOnSuccess) {
+            window.close();
+          }
+        });
+      }
+    </script>
+
+    <!-- Save logged-in provider details -->
+    <input type="hidden" id="loggedInProviderNo" value="999998" />
+    <input type="hidden" id="loggedInProviderName" value="doctor openodoc" />
+    <input type="hidden" id="isHl7OfferFileForOthers" value="false" />
+
+    <!--
+    Hidden button used by the legacy fallback acknowledge flow (isHl7OfferFileForOthers=false).
+    Its onclick is set server-side to ackLabFunc, which either prompts for an acknowledgement
+    comment via getComment() or acknowledges directly via handleLab(), depending on the
+    provider's lab_ack_comment preference (skipComment).
+-->
+    <button
+      id="tempAckBtn"
+      onclick="getComment('ackLab', 160)"
+      style="display: none"
+    ></button>
+
+    <!--
+    "File Document" dialog (#fileDialog) â opened by the "File for..." button.
+    Reached when the logged-in provider has already acknowledged the lab and at least
+    one other linked provider has not yet filed or acknowledged.
+    Lists eligible providers; those who have opted out appear greyed out and cannot be selected.
+    Managed by openFileOnlyDialog() in the script block above.
+-->
+    <div id="fileDialog" title="File Document" style="display: none">
+      <!-- skipAckComment: mirrors the server-side skipComment flag. When "true", the legacy
+         #tempAckBtn flow acknowledges without prompting for a comment. Unused in the
+         combined modal flow. -->
+      <input id="skipAckComment" type="hidden" value="false" />
+
+      <!-- Form that lists providers to file on behalf of -->
+      <form id="fileForm">
+        <p>
+          This result is linked to other providers who have not acknowledged or
+          filed it yet.
+        </p>
+        <p>Do you want to "file" this result on their behalf?</p>
+        <p>
+          Important - doing so will mean they likely will not see this result.
+          Only proceed if you are sure they will not need to see this result.
+        </p>
+        <input type="checkbox" id="ackSelectAllCheckbox" />
+        <label for="ackSelectAllCheckbox"><b>Select All</b></label
+        ><br />
+
+        <p>
+          Tip: In your user preferences, you can prevent others from filing
+          results on your behalf. See
+          <a
+            href="#"
+            style="text-decoration: none; color: #001ae5"
+            onclick="
+              popupPage(
+                500,
+                860,
+                '/oscar/setProviderStaleDate.do?method=viewCommentLab',
+              );
+              return false;
+            "
+            >Manage Comment Box When Acknowledging Labs</a
+          >.
+        </p>
+      </form>
+    </div>
+
+    <!--
+    "Acknowledge/File Document" modal (#combinedAckFileDialog) â opened by the "Acknowledge" button
+    when the provider has opted in to offer filing for others (isHl7OfferFileForOthers=true).
+    Lets the provider complete two actions in one step:
+      - Enter or confirm an acknowledgement comment.
+      - Optionally select other linked providers to file the result on their behalf.
+    Managed by openCombinedAckFileDialog() in the script block above.
+-->
+    <div
+      id="combinedAckFileDialog"
+      title="Acknowledge/File Document"
+      style="display: none"
+    >
+      <form id="combinedFileForm">
+        <label
+          for="combinedAckComment"
+          style="display: block; margin-bottom: 4px"
+          ><b>Please enter a comment (max 255 characters):</b></label
+        >
+        <input
+          type="text"
+          id="combinedAckComment"
+          maxlength="255"
+          style="width: 99%; margin-bottom: 10px"
+        />
+      </form>
+    </div>
+
+    <div id="lab_160">
+      <form
+        name="reassignForm_160"
+        method="post"
+        action="/oscar/lab/CA/ALL/Forward.do"
+      >
+        <input type="hidden" name="flaggedLabs" value="160" />
+        <input type="hidden" name="selectedProviders" value="" />
+        <input type="hidden" name="favorites" value="" />
+        <input type="hidden" name="labType" value="HL7" />
+        <input type="hidden" name="labType160HL7" value="imNotNull" />
+        <input
+          type="hidden"
+          id="providerNo_160"
+          name="providerNo"
+          value="999998"
+        />
+      </form>
+
+      <form
+        name="TDISLabelForm_160"
+        method="POST"
+        action="/oscar/lab/CA/ALL/createLabelTDIS.do"
+      >
+        <input type="hidden" id="labNum_160" name="lab_no" value="160" />
+        <input type="hidden" id="label_160" name="label" value="" />
+      </form>
+
+      <form
+        name="acknowledgeForm_160"
+        id="acknowledgeForm_160"
+        method="post"
+        onsubmit="javascript: void 0;"
+        action="javascript:void(0);"
+      >
+        <table
+          width="100%"
+          height="100%"
+          border="0"
+          cellspacing="0"
+          cellpadding="0"
+        >
+          <tbody>
+            <tr>
+              <td valign="top">
+                <table
+                  class="MainTableTopRowRightColumn"
+                  width="100%"
+                  border="0"
+                  cellspacing="0"
+                  cellpadding="3"
+                >
+                  <tbody>
+                    <tr>
+                      <td>
+                        <input
+                          type="hidden"
+                          name="segmentID"
+                          id="segmentID"
+                          value="160"
+                        />
+                        <input type="hidden" name="multiID" value="160" />
+                        <input
+                          type="hidden"
+                          name="providerNo"
+                          id="providerNo"
+                          value="999998"
+                        />
+                        <input
+                          type="hidden"
+                          name="status"
+                          value=""
+                          id="labStatus_160"
+                        />
+                        <input type="hidden" name="comment" value="" />
+                        <input
+                          type="hidden"
+                          name="labType"
+                          id="labType"
+                          value="HL7"
+                        />
+
+                        <input
+                          type="button"
+                          value="Acknowledge"
+                          onclick="openFileDialog(false, '160', 'HL7')"
+                        />
+
+                        <input
+                          type="button"
+                          value="Comment"
+                          onclick="return getComment('addComment', 160);"
+                        />
+                        <input
+                          type="button"
+                          class="smallButton"
+                          value="Forward"
+                          onclick="ForwardSelectedRows(160 + ':HL7', '', '')"
+                        />
+                        <input
+                          type="button"
+                          value=" Close "
+                          onclick="window.close()"
+                        />
+                        <input
+                          type="button"
+                          value=" Print "
+                          onclick="printPDF('160')"
+                        />
+
+                        <input
+                          type="button"
+                          value="Msg"
+                          onclick="handleLab('', '160', 'msgLab')"
+                        />
+                        <input
+                          type="button"
+                          value="Tickler"
+                          onclick="handleLab('', '160', 'ticklerLab')"
+                        />
+                        <input
+                          type="button"
+                          value="Unlink"
+                          onclick="unlinkDemographic(160)"
+                        />
+
+                        <input
+                          type="button"
+                          value=" E-Chart"
+                          onclick="
+                            popupStart(
+                              360,
+                              680,
+                              '/oscar/oscarMDS/SearchPatient.do?labType=HL7&amp;segmentID=160&amp;name=Patel%2C+Deval',
+                              'encounter',
+                            )
+                          "
+                        />
+
+                        <input
+                          type="button"
+                          value="Req# "
+                          title="Link to Requisition"
+                          onclick="linkreq('160', '')"
+                        />
+
+                        <span class="Field2"><i>Next Appointment: </i></span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <button
+                          type="button"
+                          id="createLabel_160"
+                          style="background-color: #6699ff"
+                          value="Label"
+                          onclick="submitLabel(this, '160')"
+                        >
+                          Label
+                        </button>
+
+                        <input
+                          type="hidden"
+                          id="labNum_160"
+                          name="lab_no"
+                          value="160"
+                        />
+                        <input
+                          type="text"
+                          id="acklabel_160"
+                          name="label"
+                          value=""
+                        />
+
+                        <span id="labelspan_160" class="Field2"><i> </i></span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <table
+                  width="100%"
+                  border="1"
+                  cellspacing="0"
+                  cellpadding="3"
+                  bgcolor="#9999CC"
+                  bordercolordark="#bfcbe3"
+                >
+                  <tbody>
+                    <tr>
+                      <td width="66%" align="middle" class="Cell">
+                        <div class="Field2">Detail Results: Patient Info.</div>
+                      </td>
+                      <td width="33%" align="middle" class="Cell">
+                        <div class="Field2">Results Info</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td bgcolor="white" valign="top">
+                        <table
+                          valign="top"
+                          border="0"
+                          cellpadding="2"
+                          cellspacing="0"
+                          width="100%"
+                        >
+                          <tbody>
+                            <tr valign="top">
+                              <td valign="top" width="33%" align="left">
+                                <table
+                                  width="100%"
+                                  border="0"
+                                  cellpadding="2"
+                                  cellspacing="0"
+                                  valign="top"
+                                  id="DemoTable160"
+                                >
+                                  <tbody>
+                                    <tr>
+                                      <td valign="top" align="left">
+                                        <table
+                                          valign="top"
+                                          border="0"
+                                          cellpadding="3"
+                                          cellspacing="0"
+                                          width="100%"
+                                        >
+                                          <tbody>
+                                            <tr>
+                                              <td nowrap="">
+                                                <div class="FieldData">
+                                                  <strong
+                                                    >Patient Name:
+                                                  </strong>
+                                                </div>
+                                              </td>
+                                              <td nowrap="">
+                                                <div
+                                                  class="FieldData"
+                                                  nowrap="nowrap"
+                                                >
+                                                  <a
+                                                    href="javascript:popupStart(360, 680, '/oscar/oscarMDS/SearchPatient.do?labType=HL7&amp;segmentID=160&amp;name=Patel%2C+Deval', 'searchPatientWindow')"
+                                                  >
+                                                    Deval Patel
+                                                  </a>
+                                                </div>
+                                              </td>
+                                              <td colspan="2"></td>
+                                            </tr>
+                                            <tr>
+                                              <td nowrap="">
+                                                <div class="FieldData">
+                                                  <strong
+                                                    >Date of Birth:
+                                                  </strong>
+                                                </div>
+                                              </td>
+                                              <td nowrap="">
+                                                <div
+                                                  class="FieldData"
+                                                  nowrap="nowrap"
+                                                >
+                                                  1995-12-11
+                                                </div>
+                                              </td>
+                                              <td colspan="2"></td>
+                                            </tr>
+                                            <tr>
+                                              <td nowrap="">
+                                                <div class="FieldData">
+                                                  <strong>Age: </strong>
+                                                </div>
+                                              </td>
+                                              <td nowrap="">
+                                                <div class="FieldData">
+                                                  27 years
+                                                </div>
+                                              </td>
+                                            </tr>
+                                            <tr>
+                                              <td nowrap="">
+                                                <div class="FieldData">
+                                                  <strong>
+                                                    Health Care #
+                                                  </strong>
+                                                </div>
+                                              </td>
+                                              <td nowrap="">
+                                                <div
+                                                  class="FieldData"
+                                                  nowrap="nowrap"
+                                                >
+                                                  9876543225
+                                                </div>
+                                              </td>
+                                              <td colspan="2"></td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </td>
+                                      <td width="33%" valign="top">
+                                        <table
+                                          valign="top"
+                                          border="0"
+                                          cellpadding="3"
+                                          cellspacing="0"
+                                          width="100%"
+                                        >
+                                          <tbody>
+                                            <tr>
+                                              <td nowrap="">
+                                                <div
+                                                  align="left"
+                                                  class="FieldData"
+                                                >
+                                                  <strong>Home Phone: </strong>
+                                                </div>
+                                              </td>
+                                              <td nowrap="">
+                                                <div
+                                                  align="left"
+                                                  class="FieldData"
+                                                  nowrap="nowrap"
+                                                >
+                                                  (437)774-5555
+                                                </div>
+                                              </td>
+                                            </tr>
+                                            <tr>
+                                              <td nowrap="">
+                                                <div
+                                                  align="left"
+                                                  class="FieldData"
+                                                >
+                                                  <strong>Work Phone: </strong>
+                                                </div>
+                                              </td>
+                                              <td nowrap="">
+                                                <div
+                                                  align="left"
+                                                  class="FieldData"
+                                                  nowrap="nowrap"
+                                                ></div>
+                                              </td>
+                                            </tr>
+                                            <tr>
+                                              <td nowrap="">
+                                                <div class="FieldData">
+                                                  <strong>Sex: </strong>
+                                                </div>
+                                              </td>
+                                              <td align="left" nowrap="">
+                                                <div class="FieldData">F</div>
+                                              </td>
+                                            </tr>
+                                            <tr>
+                                              <td nowrap="">
+                                                <div
+                                                  align="left"
+                                                  class="FieldData"
+                                                >
+                                                  <strong
+                                                    >Patient Location:
+                                                  </strong>
+                                                </div>
+                                              </td>
+                                              <td nowrap="">
+                                                <div
+                                                  align="left"
+                                                  class="FieldData"
+                                                  nowrap="nowrap"
+                                                >
+                                                  GDML
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td bgcolor="white" valign="top">
+                        <table
+                          width="100%"
+                          border="0"
+                          cellspacing="0"
+                          cellpadding="1"
+                        >
+                          <tbody>
+                            <tr>
+                              <td>
+                                <div class="FieldData">
+                                  <strong>Date of Service:</strong>
+                                </div>
+                              </td>
+                              <td>
+                                <div class="FieldData" nowrap="nowrap">
+                                  2023-06-09 09:49
+                                </div>
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td>
+                                <div class="FieldData">
+                                  <strong>Date of Request:</strong>
+                                </div>
+                              </td>
+                              <td>
+                                <div class="FieldData" nowrap="nowrap">
+                                  2023-06-09 09:49
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <div class="FieldData">
+                                  <strong>Lab Download Date/Time:</strong>
+                                </div>
+                              </td>
+                              <td>
+                                <div class="FieldData" nowrap="nowrap">
+                                  2024-03-21 22:07
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <div class="FieldData">
+                                  <strong>Report Status:</strong>
+                                </div>
+                              </td>
+                              <td>
+                                <div class="FieldData" nowrap="nowrap">F</div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td></td>
+                            </tr>
+                            <tr>
+                              <td nowrap="">
+                                <div class="FieldData">
+                                  <strong>Client Ref. #:</strong>
+                                </div>
+                              </td>
+                              <td nowrap="">
+                                <div class="FieldData" nowrap="nowrap"></div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <div class="FieldData">
+                                  <strong>Accession #:</strong>
+                                </div>
+                              </td>
+                              <td>
+                                <div class="FieldData" nowrap="nowrap">
+                                  AC-46222150
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td bgcolor="white" colspan="2">
+                        <table
+                          width="100%"
+                          border="0"
+                          cellpadding="0"
+                          cellspacing="0"
+                          bordercolor="#CCCCCC"
+                        >
+                          <tbody>
+                            <tr>
+                              <td bgcolor="white">
+                                <div class="FieldData">
+                                  <strong>Requesting Client: </strong>
+                                  P. AZIZI NAMINI
+                                </div>
+                              </td>
+
+                              <td bgcolor="white" align="right">
+                                <div class="FieldData">
+                                  <strong>cc: Client: </strong>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        align="center"
+                        bgcolor="white"
+                        colspan="2"
+                        style="padding: 0px"
+                        cellspacing="0"
+                      >
+                        <table
+                          width="100%"
+                          height="20"
+                          cellpadding="2"
+                          cellspacing="2"
+                        >
+                          <tbody>
+                            <tr>
+                              <td align="center" bgcolor="white">
+                                <div class="FieldData">
+                                  <!--center-->
+                                  <font color="red">N/A</font>
+                                  <!--/center-->
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <table
+                  style="page-break-inside: avoid"
+                  bgcolor="#003399"
+                  border="0"
+                  cellpadding="0"
+                  cellspacing="0"
+                  width="100%"
+                >
+                  <tbody>
+                    <tr>
+                      <td colspan="4" height="7">&nbsp;</td>
+                    </tr>
+                    <tr>
+                      <td bgcolor="#FFCC00" width="300" valign="bottom">
+                        <div class="Title2">URINALYSIS</div>
+                      </td>
+
+                      <td width="9">&nbsp;</td>
+                      <td width="9">&nbsp;</td>
+                      <td width="*">&nbsp;</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <table
+                  width="100%"
+                  border="0"
+                  cellspacing="0"
+                  cellpadding="2"
+                  bgcolor="#CCCCFF"
+                  bordercolor="#9966FF"
+                  bordercolordark="#bfcbe3"
+                  name="tblDiscs"
+                  id="tblDiscs"
+                >
+                  <tbody>
+                    <tr class="Field2">
+                      <td
+                        width="25%"
+                        align="middle"
+                        valign="bottom"
+                        class="Cell"
+                      >
+                        Test Name(s)
+                      </td>
+                      <td
+                        width="15%"
+                        align="middle"
+                        valign="bottom"
+                        class="Cell"
+                      >
+                        Result
+                      </td>
+                      <td
+                        width="5%"
+                        align="middle"
+                        valign="bottom"
+                        class="Cell"
+                      >
+                        Abn
+                      </td>
+                      <td
+                        width="15%"
+                        align="middle"
+                        valign="bottom"
+                        class="Cell"
+                      >
+                        Reference Range
+                      </td>
+                      <td
+                        width="10%"
+                        align="middle"
+                        valign="bottom"
+                        class="Cell"
+                      >
+                        Units
+                      </td>
+
+                      <td
+                        width="15%"
+                        align="middle"
+                        valign="bottom"
+                        class="Cell"
+                      >
+                        Date/Time Completed
+                      </td>
+
+                      <td
+                        width="6%"
+                        align="middle"
+                        valign="bottom"
+                        class="Cell"
+                      >
+                        Status
+                      </td>
+                      <td
+                        width="6%"
+                        align="middle"
+                        valign="bottom"
+                        class="Cell"
+                      >
+                        Annotation
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="">
+                      <td valign="top" align="left">
+                        <span style="font-size: 16px; font-weight: bold"
+                          >URINALYSIS CHEMICAL</span
+                        >
+                      </td>
+                      <td colspan="6">&nbsp;</td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=GLUCOSE&amp;demo=1&amp;labType=HL7&amp;identifier=253%252621')"
+                          >GLUCOSE
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=2349-9&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">NEG</td>
+
+                      <td align="center">N</td>
+                      <td align="left">- NEG</td>
+                      <td align="left">mmol/L</td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-0',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=BILIRUBIN&amp;demo=1&amp;labType=HL7&amp;identifier=253%252622')"
+                          >BILIRUBIN
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=5770-3&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">NEG</td>
+
+                      <td align="center">N</td>
+                      <td align="left">NEGATIVE</td>
+                      <td align="left"></td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-1',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=KETONES&amp;demo=1&amp;labType=HL7&amp;identifier=253%252623')"
+                          >KETONES
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=2514-8&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">NEG</td>
+
+                      <td align="center">N</td>
+                      <td align="left">- NEG</td>
+                      <td align="left">mmol/L</td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-2',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=SPECIFIC GRAVITY&amp;demo=1&amp;labType=HL7&amp;identifier=253%252624')"
+                          >SPECIFIC GRAVITY
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=5811-5&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">1.022</td>
+
+                      <td align="center">N</td>
+                      <td align="left">1.005 - 1.030</td>
+                      <td align="left"></td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-3',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="AbnormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=BLOOD&amp;demo=1&amp;labType=HL7&amp;identifier=253%252625')"
+                          >BLOOD
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=X100222&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">TRACE</td>
+
+                      <td align="center">A</td>
+                      <td align="left">NEGATIVE</td>
+                      <td align="left"></td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-4',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=pH&amp;demo=1&amp;labType=HL7&amp;identifier=253%252626')"
+                          >pH
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=2756-5&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">6.5</td>
+
+                      <td align="center">N</td>
+                      <td align="left">5.0 - 8.0</td>
+                      <td align="left"></td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-5',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=PROTEIN&amp;demo=1&amp;labType=HL7&amp;identifier=253%252627')"
+                          >PROTEIN
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=5804-0&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">NEG</td>
+
+                      <td align="center">N</td>
+                      <td align="left">- NEG</td>
+                      <td align="left">g/L</td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-6',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=UROBILINOGEN&amp;demo=1&amp;labType=HL7&amp;identifier=253%252628')"
+                          >UROBILINOGEN
+                        </a>
+                      </td>
+
+                      <td align="right">3.2</td>
+
+                      <td align="center">N</td>
+                      <td align="left">- 32.99</td>
+                      <td align="left">umol/L</td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-7',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=NITRITE&amp;demo=1&amp;labType=HL7&amp;identifier=253%252629')"
+                          >NITRITE
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=5802-4&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">NEG</td>
+
+                      <td align="center">N</td>
+                      <td align="left">NEGATIVE</td>
+                      <td align="left"></td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-8',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="AbnormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=LEUKOCYTES&amp;demo=1&amp;labType=HL7&amp;identifier=253%252630')"
+                          >LEUKOCYTES
+                        </a>
+
+                        <a
+                          href="javascript:popupStart('660','1000','http://apps.nlm.nih.gov/medlineplus/services/mpconnect.cfm?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&amp;mainSearchCriteria.v.c=5799-2&amp;informationRecipient.languageCode.c=en')"
+                        >
+                          info</a
+                        >
+                      </td>
+
+                      <td align="right">MODERATE</td>
+
+                      <td align="center">A</td>
+                      <td align="left">NEGATIVE</td>
+                      <td align="left"></td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-9',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="NormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=COLOUR&amp;demo=1&amp;labType=HL7&amp;identifier=253%252631')"
+                          >COLOUR
+                        </a>
+                      </td>
+
+                      <td align="right">YELLOW</td>
+
+                      <td align="center">N</td>
+                      <td align="left">- YELLOW</td>
+                      <td align="left">YELLOW</td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-10',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+
+                    <tr bgcolor="" class="AbnormalRes">
+                      <td valign="top" align="left">
+                        &nbsp; &nbsp; &nbsp;<a
+                          href="javascript:popupStart('660','900','/oscar/lab/CA/ON/labValues.jsp?testName=APPEARANCE&amp;demo=1&amp;labType=HL7&amp;identifier=253%252632')"
+                          >APPEARANCE
+                        </a>
+                      </td>
+
+                      <td align="right">CLOUDY</td>
+
+                      <td align="center">A</td>
+                      <td align="left">- CLEAR</td>
+                      <td align="left">CLEAR</td>
+
+                      <td align="center">2023-06-09 23:12:52</td>
+                      <td align="center">F</td>
+                      <td align="center" valign="top">
+                        <a
+                          href="javascript:void(0);"
+                          title="Annotation"
+                          onclick="
+                            window.open(
+                              '/oscar/annotation/annotation.jsp?display=Lab Reports&amp;table_id=160&amp;demo=1&amp;other_id=0-11',
+                              'anwin',
+                              'width=400,height=500',
+                            )
+                          "
+                        >
+                          <img
+                            src="/oscar/images/notes.gif"
+                            alt="rxAnnotation"
+                            height="16"
+                            width="13"
+                            border="0"
+                          />
+                        </a>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <table
+                  width="100%"
+                  border="0"
+                  cellspacing="0"
+                  cellpadding="3"
+                  class="MainTableBottomRowRightColumn"
+                  bgcolor="#003399"
+                >
+                  <tbody>
+                    <tr>
+                      <td align="left" width="50%">
+                        <input
+                          type="button"
+                          value="Acknowledge"
+                          onclick="openFileDialog(false, '160', 'HL7')"
+                        />
+
+                        <input
+                          type="button"
+                          value="Comment"
+                          onclick="return getComment('addComment', 160);"
+                        />
+                        <input
+                          type="button"
+                          class="smallButton"
+                          value="Forward"
+                          onclick="ForwardSelectedRows(160 + ':HL7', '', '')"
+                        />
+                        <input
+                          type="button"
+                          value=" Close "
+                          onclick="window.close()"
+                        />
+                        <input
+                          type="button"
+                          value=" Print "
+                          onclick="printPDF('160')"
+                        />
+
+                        <input
+                          type="button"
+                          value=" E-Chart "
+                          onclick="
+                            popupStart(
+                              360,
+                              680,
+                              '/oscar/oscarMDS/SearchPatient.do?labType=HL7&amp;segmentID=160&amp;name=Patel%2C+Deval',
+                              'encounter',
+                            )
+                          "
+                        />
+                      </td>
+                      <td width="50%" valign="center" align="left">
+                        <span class="Field2"><i>END OF REPORT</i></span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <br />
+                <table></table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </form>
+
+      <a
+        style="color: white"
+        href="javascript: void(0);"
+        onclick="showHideItem('rawhl71779123593998')"
+        >show</a
+      >
+      <pre id="rawhl71779123593998" style="display: none">
+MSH|^~\&amp;|GDML|GDML|||20230609231262||ORU^R01|MAGENTA .83610181|P|2.3
+PID|1|9876543225^FW^ON|AC-46222150||Patel^Deval^K||19951211|F|||123 MAIN RD^NORTH YORK^ONTARIO^ON^M6B3Y5||(437)774-5555
+OBR|1|||253^URINALYSIS CHEMICAL^L253A^URINALYSIS|R|202306090949|202306090949||0000||N|||||045717^P. AZIZI NAMINI||||||20230609231252|||||
+OBX|1|ST|253&amp;21^GLUCOSE|1|NEG|mmol/L|-NEG^NEGATIVE (mmol/L)|N||F||||||
+OBX|2|ST|253&amp;22^BILIRUBIN|1|NEG||-NEG^NEGATIVE|N||F||||||
+OBX|3|ST|253&amp;23^KETONES|1|NEG|mmol/L|-NEG^NEGATIVE (mmol/L)|N||F||||||
+OBX|4|NM|253&amp;24^SPECIFIC GRAVITY|1|1.022||1.005-1.030^1.005 - 1.030|N||F||||||
+OBX|5|ST|253&amp;25^BLOOD|1|TRACE||-NEG^NEGATIVE|A||F||||||
+OBX|6|NM|253&amp;26^pH|1|6.5||5.-8.000^5.0 - 8.0|N||F||||||
+OBX|7|ST|253&amp;27^PROTEIN|1|NEG|g/L|-NEG^NEGATIVE (g/L)|N||F||||||
+OBX|8|NM|253&amp;28^UROBILINOGEN|1|3.2|umol/L|-32.99^3.2 - 16  umol/L|N||F||||||
+OBX|9|ST|253&amp;29^NITRITE|1|NEG||-NEG^NEGATIVE|N||F||||||
+OBX|10|ST|253&amp;30^LEUKOCYTES|1|MODERATE||-NEG^NEGATIVE|A||F||||||
+OBX|11|ST|253&amp;31^COLOUR|1|YELLOW||-YELLOW^YELLOW|N||F||||||
+OBX|12|ST|253&amp;32^APPEARANCE|1|CLOUDY||-CLEAR^CLEAR|A||F||||||
+</pre
+      >
+    </div>
+
+    <script
+      type="text/javascript"
+      src="/oscar/share/javascript/oscarMDSIndex.js"
+    ></script>
+
+    <div
+      id="clinical-ally-host"
+      style="
+        position: fixed;
+        right: 0px;
+        top: 0px;
+        height: 100vh;
+        width: 48px;
+        z-index: 2147483647;
+        transition: width 0.3s;
+        box-shadow: none;
+        pointer-events: none;
+      "
+    ></div>
+  </body>
+</html>
