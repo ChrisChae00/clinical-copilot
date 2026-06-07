@@ -8,3 +8,4 @@ whisperx
 torch
 torchaudio
 beautifulsoup4
+lxml

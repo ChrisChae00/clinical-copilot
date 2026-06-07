@@ -57,7 +57,7 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 Then pull the model (may take a while):
 
 ```bash
-docker compose exec ollama ollama pull granite4
+docker compose exec ollama ollama pull qwen2.5vl:7b 
 ```
 
 Verify: `curl -s http://localhost:8000/docs` should open the FastAPI docs.
