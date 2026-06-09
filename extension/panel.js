@@ -83,6 +83,7 @@ gatherContextBtn.addEventListener('click', async () => {
 
 clearContextBtn.addEventListener('click', async () => {
   await contextManager.clearStoredContext();
+  await contextManager.clearChatContext();
   if (contextVisible) renderContextView(null);
 });
 
@@ -250,15 +251,20 @@ form.addEventListener('submit', async (e) => {
   setLoading(true);
 
   try {
-    const storedContext = await contextManager.getStoredContext();
-    const resp = await fetch(`${API_URL}/generate-str`, {
+    // Build context string — use accumulated chat context if it exists,
+    // otherwise seed from current page's patient info.
+    let chatContext = await contextManager.getChatContext();
+    if (!chatContext) {
+      const contextObj = await contextManager.requestContext();
+      chatContext = contextManager.serializeContextToPatientInfo(contextObj);
+    }
+
+    const raw_html = await contextManager.requestPageHtml();
+
+    const resp = await fetch(`${API_URL}/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': API_KEY,
-        'Accept': 'text/event-stream',
-      },
-      body: JSON.stringify({ prompt, context: storedContext }),
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({ prompt, context: chatContext || undefined, raw_html: raw_html || undefined }),
     });
 
     if (!resp.ok) {
@@ -266,48 +272,69 @@ form.addEventListener('submit', async (e) => {
       throw new Error(err.detail || `HTTP ${resp.status}`);
     }
 
-    const msgDiv = appendMessage('', 'assistant');
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let streamDone = false;
+    const { response, updated_context, actions } = await resp.json();
+    appendMessage(response, 'assistant');
 
-    setLoading(false);
-
-    while (!streamDone) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const payload = line.slice(6).trim();
-        if (payload === '[DONE]') { streamDone = true; break; }
-        try {
-          const token = JSON.parse(payload);
-          msgDiv.textContent += token;
-          msgDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        } catch { /* malformed chunk */ }
-      }
-    }
-
-    if (buffer.startsWith('data: ')) {
-      const payload = buffer.slice(6).trim();
-      if (payload && payload !== '[DONE]') {
-        try {
-          const token = JSON.parse(payload);
-          msgDiv.textContent += token;
-        } catch { /* malformed chunk */ }
-      }
-    }
-    reader.cancel();
+    if (updated_context) await contextManager.setChatContext(updated_context);
+    if (actions?.length) renderActionSuggestions(actions);
   } catch (err) {
     appendMessage(`Error: ${err.message}`, 'error');
   } finally {
     setLoading(false);
   }
 });
+
+// ── Action suggestions ────────────────────────────────────────
+
+const ACTION_LABELS = {
+  autofill: 'Autofill form',
+};
+
+function renderActionSuggestions(actions) {
+  const container = document.createElement('div');
+  container.className = 'message assistant action-suggestions';
+
+  const label = document.createElement('div');
+  label.className = 'action-suggestions-label';
+  label.textContent = 'Suggested actions:';
+  container.appendChild(label);
+
+  actions.forEach((action) => {
+    const btn = document.createElement('button');
+    btn.className = 'action-suggestion-btn';
+    btn.textContent = ACTION_LABELS[action] || action;
+
+    if (action === 'autofill') {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        setAutofillLoading(true);
+        try {
+          const storedContext = await contextManager.getStoredContext();
+          if (!storedContext) throw new Error('No stored context. Use Gather context first.');
+          const result = await contextManager.requestAutofill({
+            apiUrl: API_URL,
+            apiKey: API_KEY,
+            context: storedContext,
+            prompt: '',
+          });
+          appendAutofillMessage(result);
+        } catch (err) {
+          appendMessage(`Autofill error: ${err.message}`, 'error');
+        } finally {
+          setAutofillLoading(false);
+        }
+      });
+    } else {
+      btn.disabled = true;
+      btn.title = 'Not yet supported';
+    }
+
+    container.appendChild(btn);
+  });
+
+  responseArea.appendChild(container);
+  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
 
 // ── DOM helpers ───────────────────────────────────────────────
 
