@@ -93,4 +93,43 @@ window.ContextManager = class ContextManager {
   async clearStoredContext() {
     await this.storage.remove(this.storageKey);
   }
+
+  // ── Chat context (accumulated string for /chat endpoint) ──────
+
+  get _chatContextKey() { return `${this.storageKey}_chat`; }
+
+  async getChatContext() {
+    const result = await this.storage.get(this._chatContextKey);
+    return result?.[this._chatContextKey] ?? null;
+  }
+
+  async setChatContext(str) {
+    await this.storage.set({ [this._chatContextKey]: str });
+  }
+
+  async clearChatContext() {
+    await this.storage.remove(this._chatContextKey);
+  }
+
+  // Converts the JS object from extractOSCARContext() into the
+  // ##patient info## string block the /chat endpoint expects.
+  serializeContextToPatientInfo(contextObj) {
+    if (!contextObj || typeof contextObj !== 'object') return '';
+
+    const SKIP_KEYS = new Set(['page_url', 'page_title', 'extraction_error']);
+    const lines = [];
+
+    for (const [key, val] of Object.entries(contextObj)) {
+      if (SKIP_KEYS.has(key) || val == null || val === '') continue;
+      if (Array.isArray(val)) {
+        lines.push(`${key}:`);
+        val.forEach((item) => lines.push(`  - ${item}`));
+      } else {
+        lines.push(`${key}: ${val}`);
+      }
+    }
+
+    if (!lines.length) return '';
+    return '##patient info##\n' + lines.join('\n');
+  }
 };
