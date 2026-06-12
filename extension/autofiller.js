@@ -30,7 +30,7 @@
 
       this.apiUrl = apiUrl.replace(/\/$/, '');
       this.apiKey = apiKey;
-      this.context = context || {};
+      this.context = context || '';
       this.prompt = prompt || [
         'Fill blank fields on the current page using only the saved context.',
         'Only return fills for fields where the context provides a confident value.',
