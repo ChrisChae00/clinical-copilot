@@ -423,7 +423,7 @@
         const autofiller = new window.ClinicalAllyAutofiller({
           apiUrl: event.data.apiUrl,
           apiKey: event.data.apiKey,
-          context: event.data.context || {},
+          context: event.data.context || '',
           prompt: event.data.prompt || '',
         });
         return autofiller.autofill();
