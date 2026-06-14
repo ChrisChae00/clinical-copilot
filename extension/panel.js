@@ -12,6 +12,9 @@ const autofillBtn = document.getElementById('autofill-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
+const attachBtn = document.getElementById('attach-btn');
+const imageInput = document.getElementById('image-input');
+const imagePreviews = document.getElementById('image-previews');
 
 const contextManager = new ContextManager();
 
@@ -204,6 +207,83 @@ function appendTranscript(segments) {
   return container;
 }
 
+// ── Image attachments ─────────────────────────────────────────
+// Captured via file picker or clipboard paste, sent with the next
+// chat message as base64 (no data-URI prefix — Ollama expects raw base64).
+
+let pendingImages = [];
+let imageIdCounter = 0;
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const comma = String(dataUrl).indexOf(',');
+      resolve({ dataUrl, b64: String(dataUrl).slice(comma + 1) });
+    };
+    reader.onerror = () => reject(new Error('Could not read image file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addImageFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  try {
+    const { dataUrl, b64 } = await fileToBase64(file);
+    pendingImages.push({ id: imageIdCounter++, dataUrl, b64 });
+    renderImagePreviews();
+  } catch (err) {
+    appendMessage(`Image error: ${err.message}`, 'error');
+  }
+}
+
+function removePendingImage(id) {
+  pendingImages = pendingImages.filter((img) => img.id !== id);
+  renderImagePreviews();
+}
+
+function renderImagePreviews() {
+  imagePreviews.replaceChildren();
+  pendingImages.forEach((img) => {
+    const chip = document.createElement('div');
+    chip.className = 'image-chip';
+
+    const thumb = document.createElement('img');
+    thumb.className = 'image-chip-thumb';
+    thumb.src = img.dataUrl;
+    thumb.alt = 'Attached image';
+    chip.appendChild(thumb);
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'image-chip-remove';
+    remove.setAttribute('aria-label', 'Remove image');
+    remove.textContent = '×';
+    remove.addEventListener('click', () => removePendingImage(img.id));
+    chip.appendChild(remove);
+
+    imagePreviews.appendChild(chip);
+  });
+}
+
+attachBtn.addEventListener('click', () => imageInput.click());
+
+imageInput.addEventListener('change', async () => {
+  for (const file of imageInput.files) await addImageFile(file);
+  imageInput.value = ''; // allow re-selecting the same file
+});
+
+input.addEventListener('paste', async (e) => {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (file) await addImageFile(file);
+    }
+  }
+});
+
 // ── Chat form ─────────────────────────────────────────────────
 
 async function resolveChatContext() {
@@ -227,11 +307,17 @@ form.addEventListener('submit', async (e) => {
   try {
     const chatContext = await resolveChatContext();
     const raw_html = await contextManager.requestPageHtml();
+    const images_b64 = pendingImages.map((img) => img.b64);
 
     const resp = await fetch(`${API_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-      body: JSON.stringify({ prompt, context: chatContext || undefined, raw_html: raw_html || undefined }),
+      body: JSON.stringify({
+        prompt,
+        context: chatContext || undefined,
+        raw_html: raw_html || undefined,
+        images_b64: images_b64.length ? images_b64 : undefined,
+      }),
     });
 
     if (!resp.ok) {
@@ -241,6 +327,9 @@ form.addEventListener('submit', async (e) => {
 
     const { response, updated_context, actions } = await resp.json();
     appendMessage(response, 'assistant');
+
+    pendingImages = [];
+    renderImagePreviews();
 
     if (updated_context) await contextManager.setChatContext(updated_context);
     if (actions?.length) renderActionSuggestions(actions);
