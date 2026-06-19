@@ -37,8 +37,18 @@
               <span>Include current page HTML</span>
             </label>
           </div>
+          <div id="image-preview-list" class="image-preview-list hidden" aria-label="Attached images"></div>
           <form id="prompt-form" autocomplete="off">
+            <input id="image-input" class="hidden" type="file" accept="image/*" multiple />
             <div class="input-wrapper">
+              <button
+                id="attach-image-btn"
+                type="button"
+                aria-label="Attach image"
+                title="Attach image"
+              >
+                +
+              </button>
               <input
                 id="prompt-input"
                 type="text"
@@ -77,6 +87,7 @@
   </div>
   <script src="client.js"></script>
   <script src="context-manager.js"></script>
+  <script src="image-manager.js"></script>
   <script src="panel.js"></script>
 </body>
 </html>

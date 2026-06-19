@@ -14,8 +14,18 @@ const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
 const includeHtmlToggle = document.getElementById('include-html-toggle');
+const attachImageBtn = document.getElementById('attach-image-btn');
+const imageInput = document.getElementById('image-input');
+const imagePreviewList = document.getElementById('image-preview-list');
 
 const contextManager = new ContextManager();
+const imageManager = new ImageManager({
+  attachButton: attachImageBtn,
+  fileInput: imageInput,
+  pasteTarget: input,
+  previewList: imagePreviewList,
+  onError: (err) => appendMessage(`Image attach error: ${err.message}`, 'error'),
+});
 
 // ── Context controls ──────────────────────────────────────────
 
@@ -200,7 +210,12 @@ form.addEventListener('submit', async (e) => {
   const prompt = input.value.trim();
   if (!prompt) return;
 
-  appendMessage(prompt, 'user');
+  const imagesToSend = imageManager.getImages();
+  const imageCountLabel = imagesToSend.length
+    ? ` (${imagesToSend.length} image${imagesToSend.length === 1 ? '' : 's'} attached)`
+    : '';
+
+  appendMessage(`${prompt}${imageCountLabel}`, 'user');
   input.value = '';
   setLoading(true);
 
@@ -213,8 +228,10 @@ form.addEventListener('submit', async (e) => {
       prompt,
       context: chatContext || undefined,
       raw_html: raw_html || undefined,
+      images_b64: imagesToSend.length ? imagesToSend.map((image) => image.b64) : undefined,
     });
     appendMessage(response, 'assistant');
+    imageManager.clear();
 
     if (updated_context) await contextManager.setChatContext(updated_context);
     if (actions?.length) renderActionSuggestions(actions);
@@ -553,5 +570,6 @@ function appendClinicalActions(summary, actions) {
 function setLoading(loading) {
   sendBtn.disabled = loading;
   input.disabled = loading;
+  imageManager.setDisabled(loading);
   spinner.classList.toggle('hidden', !loading);
 }
