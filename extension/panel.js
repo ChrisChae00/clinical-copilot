@@ -13,6 +13,7 @@ const autofillBtn = document.getElementById('autofill-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
+const includeHtmlToggle = document.getElementById('include-html-toggle');
 
 const contextManager = new ContextManager();
 
@@ -205,7 +206,8 @@ form.addEventListener('submit', async (e) => {
 
   try {
     const chatContext = await resolveChatContext();
-    const raw_html = await contextManager.requestPageHtml();
+    const includeRawHtml = Boolean(includeHtmlToggle?.checked);
+    const raw_html = includeRawHtml ? await contextManager.requestPageHtml() : '';
 
     const { response, updated_context, actions } = await client.chat({
       prompt,
