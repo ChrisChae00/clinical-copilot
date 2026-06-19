@@ -16,12 +16,13 @@
     'submit',
   ]);
 
-  class ClinicalAllyAutofiller {
+  class AutofillManager {
     constructor({
       apiUrl,
       apiKey,
       context,
       prompt = '',
+      images_b64 = [],
       preserveExisting = false,
       documentRef = document,
     } = {}) {
@@ -31,6 +32,7 @@
       this.apiUrl = apiUrl.replace(/\/$/, '');
       this.apiKey = apiKey;
       this.context = context || '';
+      this.images_b64 = Array.isArray(images_b64) ? images_b64 : [];
       this.prompt = prompt || [
         'Fill blank fields on the current page using only the saved context.',
         'Only return fills for fields where the context provides a confident value.',
@@ -78,15 +80,38 @@
         .filter((control) => this.isFillableControl(control));
       const fields = [];
       const radioGroups = new Map();
+      const checkboxGroups = new Map();
 
       controls.forEach((control) => {
-        if (this.getControlType(control) === 'radio') {
+        const controlType = this.getControlType(control);
+
+        if (controlType === 'radio') {
           const groupKey = control.name || control.id || this.getDomPath(control);
           if (!radioGroups.has(groupKey)) radioGroups.set(groupKey, []);
           radioGroups.get(groupKey).push(control);
           return;
         }
 
+        if (controlType === 'checkbox' && control.name) {
+          if (!checkboxGroups.has(control.name)) checkboxGroups.set(control.name, []);
+          checkboxGroups.get(control.name).push(control);
+          return;
+        }
+
+        const field = this.createField(control, fields.length);
+        fields.push(field);
+        this.fieldMap.set(field.id, { kind: 'control', control, field });
+      });
+
+      checkboxGroups.forEach((groupControls) => {
+        if (groupControls.length > 1) {
+          const field = this.createCheckboxGroupField(groupControls, fields.length);
+          fields.push(field);
+          this.fieldMap.set(field.id, { kind: 'checkbox_group', controls: groupControls, field });
+          return;
+        }
+
+        const control = groupControls[0];
         const field = this.createField(control, fields.length);
         fields.push(field);
         this.fieldMap.set(field.id, { kind: 'control', control, field });
@@ -106,6 +131,7 @@
       return {
         prompt: this.prompt,
         context: this.context,
+        images_b64: this.images_b64.length ? this.images_b64 : undefined,
         fields,
       };
     }
@@ -138,7 +164,9 @@
         try {
           const result = target.kind === 'radio'
             ? this.applyRadioFill(target, fill)
-            : this.applyControlFill(target, fill);
+            : target.kind === 'checkbox_group'
+              ? this.applyCheckboxGroupFill(target, fill)
+              : this.applyControlFill(target, fill);
 
           if (result.applied) {
             applied.push(result.summary);
@@ -297,6 +325,28 @@
       return this.appliedSummary(field, this.getLabelForControl(selected), 'select');
     }
 
+    applyCheckboxGroupFill(target, fill) {
+      const { controls, field } = target;
+      const requestedValues = this.getRequestedSelectValues(fill.value, true);
+      const matchedControls = this.findCheckboxGroupControls(controls, requestedValues);
+
+      if (requestedValues.length && matchedControls.length !== requestedValues.length) {
+        throw new Error(`Requested checkbox option was not available: ${requestedValues.join(', ')}`);
+      }
+
+      if (this.shouldPreserveCheckboxGroupValue(field, requestedValues)) {
+        return this.skippedSummary(field, 'Skipped because the checkbox group already had a value.');
+      }
+
+      controls.forEach((control) => {
+        this.setNativeChecked(control, matchedControls.includes(control));
+        this.dispatchInputEvents(control);
+      });
+
+      const selectedLabels = matchedControls.map((control) => this.getLabelForControl(control));
+      return this.appliedSummary(field, selectedLabels.join(', ') || 'none selected', 'select');
+    }
+
     // creates a field object for a given control
     createField(control, index) {
       const baseId = this.getBaseFieldId(control, index);
@@ -319,6 +369,7 @@
       if (control.name) field.name = control.name;
       if (control.placeholder) field.placeholder = control.placeholder.trim();
       if (control.tagName === 'SELECT') field.options = this.getSelectOptions(control);
+      if (field.type === 'combobox') field.options = this.getDatalistOptions(control);
 
       return field;
     }
@@ -336,6 +387,31 @@
         required: controls.some((control) => control.required),
         current_value: checked?.value || '',
         is_empty: !checked,
+        name: first.name || '',
+        options: controls.map((control) => ({
+          value: control.value,
+          label: this.getLabelForControl(control),
+          checked: Boolean(control.checked),
+        })),
+      };
+    }
+
+    createCheckboxGroupField(controls, index) {
+      const first = controls[0];
+      const baseId = first.name || first.id || `checkbox_group_${index + 1}`;
+      const fieldId = this.makeUniqueFieldId(baseId);
+      const checkedValues = controls
+        .filter((control) => control.checked)
+        .map((control) => control.value);
+
+      return {
+        id: fieldId,
+        label: this.getCheckboxGroupLabel(controls),
+        type: 'checkbox_group',
+        tag: 'input',
+        required: controls.some((control) => control.required),
+        current_value: checkedValues,
+        is_empty: checkedValues.length === 0,
         name: first.name || '',
         options: controls.map((control) => ({
           value: control.value,
@@ -385,7 +461,9 @@
 
     getFieldType(control) {
       const controlType = this.getControlType(control);
-      if (controlType === 'select-multiple' || controlType === 'select') return 'select';
+      if (controlType === 'select-multiple') return 'multiselect';
+      if (controlType === 'datetime-local') return 'datetime';
+      if (control.tagName === 'INPUT' && control.getAttribute('list')) return 'combobox';
       return controlType;
     }
 
@@ -528,6 +606,46 @@
       );
     }
 
+    findCheckboxGroupControls(controls, requestedValues) {
+      return requestedValues
+        .map((value) => this.findCheckboxControl(controls, value))
+        .filter(Boolean);
+    }
+
+    findCheckboxControl(controls, requestedValue) {
+      const requested = String(requestedValue ?? '');
+      const normalizedRequested = this.#normalizeMatchText(requested);
+
+      return (
+        controls.find((control) => control.value === requested) ||
+        controls.find((control) => this.#normalizeMatchText(control.value) === normalizedRequested) ||
+        controls.find((control) => this.#normalizeMatchText(this.getLabelForControl(control)) === normalizedRequested)
+      );
+    }
+
+    shouldPreserveCheckboxGroupValue(field, requestedValues) {
+      if (!this.preserveExisting || field.is_empty) return false;
+
+      const currentValues = Array.isArray(field.current_value) ? field.current_value : [];
+      return (
+        currentValues.length !== requestedValues.length ||
+        currentValues.some((value) => !requestedValues.includes(value))
+      );
+    }
+
+    getDatalistOptions(control) {
+      const listId = control.getAttribute('list');
+      const datalist = listId ? this.document.getElementById(listId) : null;
+      if (!datalist) return [];
+
+      return Array.from(datalist.querySelectorAll('option'))
+        .map((option) => ({
+          value: option.value,
+          label: this.#cleanText(option.label || option.textContent || option.value),
+        }))
+        .filter((option) => option.value || option.label);
+    }
+
     #normalizeAction(action, fallback) {
       const normalized = String(action || fallback || '').toLowerCase();
       if (normalized === 'select' || normalized === 'fill' || normalized === 'check' || normalized === 'uncheck') {
@@ -610,6 +728,18 @@
       if (tableLabel) return tableLabel;
 
       return this.#cleanText(first.name || first.id || 'Radio group');
+    }
+
+    getCheckboxGroupLabel(controls) {
+      const first = controls[0];
+      const fieldset = first.closest('fieldset');
+      const legend = this.#cleanText(fieldset?.querySelector('legend')?.textContent || '');
+      if (legend) return legend;
+
+      const tableLabel = this.getNearbyTableLabel(first);
+      if (tableLabel) return tableLabel;
+
+      return this.#cleanText(first.name || first.id || 'Checkbox group');
     }
 
     getNearbyTableLabel(control) {
@@ -713,5 +843,5 @@
     }
   }
 
-  window.ClinicalAllyAutofiller = ClinicalAllyAutofiller;
+  window.AutofillManager = AutofillManager;
 })();
