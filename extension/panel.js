@@ -1,5 +1,6 @@
 const API_URL = 'http://localhost:8000';
 const API_KEY = 'api-key-placeholder';
+const client = new Client({ apiUrl: API_URL, apiKey: API_KEY });
 
 const form = document.getElementById('prompt-form');
 const input = document.getElementById('prompt-input');
@@ -135,18 +136,7 @@ async function sendAudioForTranscription(blob) {
   setLoading(true);
   voiceBtn.disabled = true;
   try {
-    const formData = new FormData();
-    formData.append('audio', blob, 'recording.webm');
-    const resp = await fetch(`${API_URL}/transcribe`, {
-      method: 'POST',
-      headers: { 'X-API-Key': API_KEY },
-      body: formData,
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-    const { segments } = await resp.json();
+    const { segments } = await client.transcribe(blob);
     appendTranscript(segments);
     analyzeTranscript(segments);
   } catch (err) {
@@ -163,21 +153,10 @@ async function analyzeTranscript(segments) {
 
   try {
     const context = await contextManager.getStoredContext();
-    const body = { segments };
-    if (context) body.context = context;
-
-    const resp = await fetch(`${API_URL}/analyze-transcript`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-      body: JSON.stringify(body),
+    const { summary, actions } = await client.analyzeTranscript({
+      segments,
+      context: context || undefined,
     });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const { summary, actions } = await resp.json();
     analyzingDiv.remove();
     appendClinicalActions(summary, actions || []);
   } catch (err) {
@@ -228,18 +207,11 @@ form.addEventListener('submit', async (e) => {
     const chatContext = await resolveChatContext();
     const raw_html = await contextManager.requestPageHtml();
 
-    const resp = await fetch(`${API_URL}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-      body: JSON.stringify({ prompt, context: chatContext || undefined, raw_html: raw_html || undefined }),
+    const { response, updated_context, actions } = await client.chat({
+      prompt,
+      context: chatContext || undefined,
+      raw_html: raw_html || undefined,
     });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const { response, updated_context, actions } = await resp.json();
     appendMessage(response, 'assistant');
 
     if (updated_context) await contextManager.setChatContext(updated_context);
@@ -540,16 +512,10 @@ function appendClinicalActions(summary, actions) {
         draftArea.classList.add('hidden');
         try {
           const storedContext = await contextManager.getStoredContext();
-          const resp = await fetch(`${API_URL}/draft-action`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-            body: JSON.stringify({ action, context: storedContext }),
+          const { draft } = await client.draftAction({
+            action,
+            context: storedContext || undefined,
           });
-          if (!resp.ok) {
-            const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
-            throw new Error(err.detail || `HTTP ${resp.status}`);
-          }
-          const { draft } = await resp.json();
           draftText.value = draft;
           draftArea.classList.remove('hidden');
           draftBtn.textContent = 'Regenerate';

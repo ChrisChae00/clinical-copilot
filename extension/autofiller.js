@@ -112,21 +112,14 @@
 
     // sends the autofill request to the API and returns the response
     async requestFills(fields) {
-      const response = await fetch(`${this.apiUrl}/autofill`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey,
-        },
-        body: JSON.stringify(this.buildRequestBody(fields)),
+      if (!window.Client) throw new Error('API client is unavailable.');
+
+      const client = new window.Client({
+        apiUrl: this.apiUrl,
+        apiKey: this.apiKey,
       });
 
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(errorBody.detail || `HTTP ${response.status}`);
-      }
-
-      return response.json();
+      return client.autofill(this.buildRequestBody(fields));
     }
 
     // applies the suggested fills to the page, returning a summary of which fills were applied vs skipped
