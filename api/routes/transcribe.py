@@ -2,8 +2,8 @@ import logging
 import os
 import tempfile
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
-
+from auth import require_api_key
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
