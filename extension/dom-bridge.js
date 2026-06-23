@@ -6,7 +6,7 @@
 // through the content script.
 //
 // Keep this file focused on message passing only. DOM scraping and form mutation
-// belong in content-script helpers such as ClinicalAllyAutofiller.
+// belong in content-script helpers such as AutofillManager.
 
 (function () {
   'use strict';
