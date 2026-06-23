@@ -411,22 +411,23 @@
         browser.runtime.getURL('')
       );
     } else if (event.data.type === 'REQUEST_AUTOFILL') {
-      if (!window.ClinicalAllyAutofiller) {
+      if (!window.AutofillManager) {
         iframe.contentWindow.postMessage(
-          { type: 'AUTOFILL_RESPONSE', ok: false, error: 'Autofiller is unavailable.' },
+          { type: 'AUTOFILL_RESPONSE', ok: false, error: 'AutofillManager is unavailable.' },
           browser.runtime.getURL('')
         );
         return;
       }
 
       const runAutofill = async () => {
-        const autofiller = new window.ClinicalAllyAutofiller({
+        const autofillManager = new window.AutofillManager({
           apiUrl: event.data.apiUrl,
           apiKey: event.data.apiKey,
           context: event.data.context || '',
           prompt: event.data.prompt || '',
+          images_b64: Array.isArray(event.data.images_b64) ? event.data.images_b64 : [],
         });
-        return autofiller.autofill();
+        return autofillManager.autofill();
       };
 
       runAutofill()

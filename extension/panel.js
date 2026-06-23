@@ -1,5 +1,6 @@
 const API_URL = 'http://localhost:8000';
 const API_KEY = 'api-key-placeholder';
+const client = new Client({ apiUrl: API_URL, apiKey: API_KEY });
 
 const form = document.getElementById('prompt-form');
 const input = document.getElementById('prompt-input');
@@ -8,12 +9,26 @@ const voiceBtn = document.getElementById('voice-btn');
 const responseArea = document.getElementById('response-area');
 const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
-const autofillBtn = document.getElementById('autofill-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
+const includeHtmlToggle = document.getElementById('include-html-toggle');
+const attachImageBtn = document.getElementById('attach-image-btn');
+const imageInput = document.getElementById('image-input');
+const imagePreviewList = document.getElementById('image-preview-list');
 
 const contextManager = new ContextManager();
+const domBridge = new DomBridge();
+const imageManager = new ImageManager({
+  attachButton: attachImageBtn,
+  fileInput: imageInput,
+  pasteTarget: input,
+  previewList: imagePreviewList,
+  onError: (err) => appendMessage(`Image attach error: ${err.message}`, 'error'),
+});
+
+let lastUserPrompt = '';
+let lastUserImagesB64 = [];
 
 // ── Context controls ──────────────────────────────────────────
 
@@ -23,12 +38,6 @@ function renderContextView(context) {
     return;
   }
   contextView.textContent = context;
-}
-
-function setAutofillLoading(loading) {
-  autofillBtn.disabled = loading;
-  clearContextBtn.disabled = loading;
-  autofillBtn.textContent = loading ? 'Autofilling...' : 'Autofill';
 }
 
 closeBtn.addEventListener('click', () => {
@@ -42,33 +51,14 @@ viewContextBtn.addEventListener('click', async () => {
   contextView.classList.toggle('hidden', !contextVisible);
   viewContextBtn.textContent = contextVisible ? 'Hide context' : 'View context';
   if (contextVisible) {
-    const chatContext = await contextManager.getChatContext();
-    renderContextView(chatContext);
+    renderContextView(contextManager.getContext());
   }
 });
 
 
 clearContextBtn.addEventListener('click', async () => {
-  await contextManager.clearChatContext();
+  contextManager.clearContext();
   if (contextVisible) renderContextView(null);
-});
-
-autofillBtn.addEventListener('click', async () => {
-  setAutofillLoading(true);
-  try {
-    const chatContext = await resolveChatContext();
-    const result = await contextManager.requestAutofill({
-      apiUrl: API_URL,
-      apiKey: API_KEY,
-      context: chatContext,
-      prompt: input.value.trim(),
-    });
-    appendAutofillMessage(result);
-  } catch (err) {
-    appendMessage(`Autofill error: ${err.message}`, 'error');
-  } finally {
-    setAutofillLoading(false);
-  }
 });
 
 // ── Voice recording ───────────────────────────────────────────
@@ -135,18 +125,7 @@ async function sendAudioForTranscription(blob) {
   setLoading(true);
   voiceBtn.disabled = true;
   try {
-    const formData = new FormData();
-    formData.append('audio', blob, 'recording.webm');
-    const resp = await fetch(`${API_URL}/transcribe`, {
-      method: 'POST',
-      headers: { 'X-API-Key': API_KEY },
-      body: formData,
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-    const { segments } = await resp.json();
+    const { segments } = await client.transcribe(blob);
     appendTranscript(segments);
     analyzeTranscript(segments);
   } catch (err) {
@@ -162,22 +141,11 @@ async function analyzeTranscript(segments) {
   analyzingDiv.classList.add('analyzing');
 
   try {
-    const context = await contextManager.getStoredContext();
-    const body = { segments };
-    if (context) body.context = context;
-
-    const resp = await fetch(`${API_URL}/analyze-transcript`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-      body: JSON.stringify(body),
+    const context = await resolveChatContext();
+    const { summary, actions } = await client.analyzeTranscript({
+      segments,
+      context: context || undefined,
     });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const { summary, actions } = await resp.json();
     analyzingDiv.remove();
     appendClinicalActions(summary, actions || []);
   } catch (err) {
@@ -207,12 +175,15 @@ function appendTranscript(segments) {
 // ── Chat form ─────────────────────────────────────────────────
 
 async function resolveChatContext() {
-  let ctx = await contextManager.getChatContext();
-  if (!ctx) {
-    const contextObj = await contextManager.requestContext();
-    ctx = contextManager.serializeContextToPatientInfo(contextObj);
+  let context = contextManager.getContext();
+
+  if (!context) {
+    const contextObj = await domBridge.requestContext();
+    context = contextManager.serializeContextToPatientInfo(contextObj);
+    contextManager.setContext(context);
   }
-  return ctx || '';
+
+  return context || '';
 }
 
 form.addEventListener('submit', async (e) => {
@@ -220,29 +191,33 @@ form.addEventListener('submit', async (e) => {
   const prompt = input.value.trim();
   if (!prompt) return;
 
-  appendMessage(prompt, 'user');
+  const imagesToSend = imageManager.getImages();
+  lastUserPrompt = prompt;
+  lastUserImagesB64 = imagesToSend.map((image) => image.b64);
+
+  const imageCountLabel = imagesToSend.length
+    ? ` (${imagesToSend.length} image${imagesToSend.length === 1 ? '' : 's'} attached)`
+    : '';
+
+  appendMessage(`${prompt}${imageCountLabel}`, 'user');
   input.value = '';
   setLoading(true);
 
   try {
     const chatContext = await resolveChatContext();
-    const raw_html = await contextManager.requestPageHtml();
+    const includeRawHtml = Boolean(includeHtmlToggle?.checked);
+    const raw_html = includeRawHtml ? await domBridge.requestPageHtml() : '';
 
-    const resp = await fetch(`${API_URL}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-      body: JSON.stringify({ prompt, context: chatContext || undefined, raw_html: raw_html || undefined }),
+    const { response, updated_context, actions } = await client.chat({
+      prompt,
+      context: chatContext || undefined,
+      raw_html: raw_html || undefined,
+      images_b64: imagesToSend.length ? imagesToSend.map((image) => image.b64) : undefined,
     });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-
-    const { response, updated_context, actions } = await resp.json();
     appendMessage(response, 'assistant');
+    imageManager.clear();
 
-    if (updated_context) await contextManager.setChatContext(updated_context);
+    if (updated_context) contextManager.setContext(updated_context);
     if (actions?.length) renderActionSuggestions(actions);
   } catch (err) {
     appendMessage(`Error: ${err.message}`, 'error');
@@ -258,6 +233,9 @@ const ACTION_LABELS = {
 };
 
 function renderActionSuggestions(actions) {
+  const supportedActions = (actions || []).filter((action) => action === 'autofill');
+  if (!supportedActions.length) return;
+
   const container = document.createElement('div');
   container.className = 'message assistant action-suggestions';
 
@@ -266,40 +244,79 @@ function renderActionSuggestions(actions) {
   label.textContent = 'Suggested actions:';
   container.appendChild(label);
 
-  actions.forEach((action) => {
-    const btn = document.createElement('button');
-    btn.className = 'action-suggestion-btn';
-    btn.textContent = ACTION_LABELS[action] || action;
-
+  supportedActions.forEach((action) => {
     if (action === 'autofill') {
-      btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        setAutofillLoading(true);
-        try {
-          const chatContext = await resolveChatContext();
-          const result = await contextManager.requestAutofill({
-            apiUrl: API_URL,
-            apiKey: API_KEY,
-            context: chatContext,
-            prompt: '',
-          });
-          appendAutofillMessage(result);
-        } catch (err) {
-          appendMessage(`Autofill error: ${err.message}`, 'error');
-        } finally {
-          setAutofillLoading(false);
-        }
-      });
-    } else {
-      btn.disabled = true;
-      btn.title = 'Not yet supported';
+      container.appendChild(createAutofillActionCard());
     }
-
-    container.appendChild(btn);
   });
 
   responseArea.appendChild(container);
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function createAutofillActionCard() {
+  const card = document.createElement('div');
+  card.className = 'autofill-action-card';
+
+  const title = document.createElement('div');
+  title.className = 'autofill-action-title';
+  title.textContent = ACTION_LABELS.autofill;
+  card.appendChild(title);
+
+  const description = document.createElement('div');
+  description.className = 'autofill-action-description';
+  description.textContent = 'Run this to scan the current page fields and fill supported values from the current context.';
+  card.appendChild(description);
+
+  const extraPrompt = document.createElement('textarea');
+  extraPrompt.className = 'autofill-extra-prompt';
+  extraPrompt.rows = 3;
+  extraPrompt.placeholder = 'Optional: add extra instructions for this autofill run.';
+  card.appendChild(extraPrompt);
+
+  const runBtn = document.createElement('button');
+  runBtn.className = 'autofill-run-btn';
+  runBtn.type = 'button';
+  runBtn.textContent = 'Run autofill';
+  runBtn.addEventListener('click', async () => {
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running autofill…';
+
+    try {
+      await runAutofillAction(extraPrompt.value.trim());
+      runBtn.textContent = 'Autofill complete';
+    } catch (err) {
+      appendMessage(`Autofill error: ${err.message}`, 'error');
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run autofill';
+    }
+  });
+  card.appendChild(runBtn);
+
+  return card;
+}
+
+async function runAutofillAction(extraPrompt) {
+  const context = await resolveChatContext();
+  const prompt = [
+    lastUserPrompt,
+    extraPrompt ? `Additional autofill instructions: ${extraPrompt}` : '',
+  ].filter(Boolean).join('\n\n');
+  const images_b64 = [
+    ...lastUserImagesB64,
+    ...imageManager.getImagesBase64(),
+  ];
+
+  const result = await domBridge.requestAutofill({
+    apiUrl: API_URL,
+    apiKey: API_KEY,
+    context,
+    prompt,
+    images_b64,
+  });
+
+  appendAutofillMessage(result);
+  imageManager.clear();
 }
 
 // ── DOM helpers ───────────────────────────────────────────────
@@ -539,17 +556,11 @@ function appendClinicalActions(summary, actions) {
         draftBtn.textContent = 'Generating…';
         draftArea.classList.add('hidden');
         try {
-          const storedContext = await contextManager.getStoredContext();
-          const resp = await fetch(`${API_URL}/draft-action`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-            body: JSON.stringify({ action, context: storedContext }),
+          const currentContext = await resolveChatContext();
+          const { draft } = await client.draftAction({
+            action,
+            context: currentContext || undefined,
           });
-          if (!resp.ok) {
-            const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
-            throw new Error(err.detail || `HTTP ${resp.status}`);
-          }
-          const { draft } = await resp.json();
           draftText.value = draft;
           draftArea.classList.remove('hidden');
           draftBtn.textContent = 'Regenerate';
@@ -585,5 +596,6 @@ function appendClinicalActions(summary, actions) {
 function setLoading(loading) {
   sendBtn.disabled = loading;
   input.disabled = loading;
+  imageManager.setDisabled(loading);
   spinner.classList.toggle('hidden', !loading);
 }
