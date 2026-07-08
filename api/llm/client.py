@@ -40,16 +40,23 @@ import json
 
 import httpx
 
-if __name__ == "__main__":
-    # test values for running this file by itself (w.o docker)
-    # will be overridden in prod by values from config.py
-    # FOR TESTING PURPOSES
-    MAX_CONTEXT_LEN = 8192
-    MODEL_NAME = "qwen2.5vl:7b"
-    OLLAMA_URL = "http://localhost:11434"
-else:
-    # import values for prod
-    from config import MAX_CONTEXT_LEN, MODEL_NAME, OLLAMA_URL
+# import values for prod
+from config import (
+    MAX_CONTEXT_LEN,
+    MODEL_NAME,
+    OLLAMA_CF_ACCESS_CLIENT_ID,
+    OLLAMA_CF_ACCESS_CLIENT_SECRET,
+    OLLAMA_URL,
+)
+
+# FOR TESTING PURPOSES
+# test values for running this file by itself (w.o docker)
+# will be overridden in prod by values from config.py
+# MAX_CONTEXT_LEN = 8192
+# MODEL_NAME = "qwen2.5vl:7b"
+# OLLAMA_URL = "http://localhost:11434"
+# OLLAMA_CF_ACCESS_CLIENT_ID = insert
+# OLLAMA_CF_ACCESS_CLIENT_SECRET = insert
 
 
 async def get_llm_response_str(
@@ -87,7 +94,12 @@ async def get_llm_response_str(
 
     try:
         async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
+            # response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload) -> this is for when we host local ollama (no cloudflare)
+            response = await client.post(
+                "{OLLAMA_URL}/api/generate",
+                json=payload,
+                headers=_ollama_headers(),
+            )
     except httpx.RequestError as e:
         raise RuntimeError(f"Could not reach Ollama: {e}") from e
 
@@ -135,7 +147,12 @@ async def get_llm_response_json(
 
     try:
         async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
+            # response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload) -> this is for when we host local ollama (no cloudflare)
+            response = await client.post(
+                f"{OLLAMA_URL}/api/generate",
+                json=payload,
+                headers=_ollama_headers(),
+            )
     except httpx.RequestError as e:
         raise RuntimeError(f"Could not reach Ollama: {e}") from e
 
@@ -164,7 +181,11 @@ async def is_ollama_healthy() -> bool:
     """
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            response = await client.get(f"{OLLAMA_URL}/api/tags")
+            # response = await client.get(f"{OLLAMA_URL}/api/tags") -> this is for when we host local ollama (no cloudflare)
+            response = await client.get(
+                f"{OLLAMA_URL}/api/tags",
+                headers=_ollama_headers(),
+            )
             response.raise_for_status()
         return True
     except httpx.RequestError as e:
@@ -177,33 +198,46 @@ async def is_ollama_healthy() -> bool:
         return False
 
 
-# FOR TESTING PURPOSES
-if __name__ == "__main__":
-
-    import asyncio
-
-    prompt = "who is my patient? give me all the info"
-
-    context = """
-        current_medications: Lisinopril,Metformin
+def _ollama_headers() -> dict[str, str]:
+    headers: dict[str, str] = {}
     """
-    image_path = "tests/test_report.png"
+    Helper func to get header for ollama request for clouflare access.
+    """
 
-    with open("tests/testpage1.html", "r", encoding="utf-8") as f:
-        raw_html = f.read()
+    if OLLAMA_CF_ACCESS_CLIENT_ID and OLLAMA_CF_ACCESS_CLIENT_SECRET:
+        headers["CF-Access-Client-Id"] = OLLAMA_CF_ACCESS_CLIENT_ID
+        headers["CF-Access-Client-Secret"] = OLLAMA_CF_ACCESS_CLIENT_SECRET
 
-    with open(image_path, "rb") as f:
-        image_bytes = f.read()
-    import base64
+    return headers
 
-    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
-    response = asyncio.run(
-        get_llm_response_json(
-            prompt=prompt,
-            system_prompt="help me extract useful information from this webpage and image",
-            images_b64=[image_b64],
-        )
-    )
+# FOR TESTING PURPOSES
+# if __name__ == "__main__":
 
-    print(response)
+#     import asyncio
+
+#     prompt = "who is my patient? give me all the info"
+
+#     context = """
+#         current_medications: Lisinopril,Metformin
+#     """
+#     image_path = "tests/test_report.png"
+
+#     with open("tests/testpage1.html", "r", encoding="utf-8") as f:
+#         raw_html = f.read()
+
+#     with open(image_path, "rb") as f:
+#         image_bytes = f.read()
+#     import base64
+
+#     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+#     response = asyncio.run(
+#         get_llm_response_json(
+#             prompt=prompt,
+#             system_prompt="help me extract useful information from this webpage and image",
+#             images_b64=[image_b64],
+#         )
+#     )
+
+#     print(response)
