@@ -86,7 +86,7 @@ async def get_llm_response_str(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=300) as client:
             response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
     except httpx.RequestError as e:
         raise RuntimeError(f"Could not reach Ollama: {e}") from e
@@ -134,7 +134,7 @@ async def get_llm_response_json(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=300) as client:
             response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
     except httpx.RequestError as e:
         raise RuntimeError(f"Could not reach Ollama: {e}") from e
