@@ -123,7 +123,24 @@
         this.fieldMap.set(field.id, { kind: 'radio', controls: groupControls, field });
       });
 
+      this.disambiguateLabels(fields);
       return fields;
+    }
+
+    // when multiple fields share the same detected label (eg. a section has a free-text
+    // field alongside several "auto-fetch" checkbox toggles that all sit under one heading),
+    // append a distinguishing hint so the LLM can tell them apart instead of skipping all of them
+    disambiguateLabels(fields) {
+      const counts = new Map();
+      fields.forEach((field) => {
+        counts.set(field.label, (counts.get(field.label) || 0) + 1);
+      });
+
+      fields.forEach((field) => {
+        if (counts.get(field.label) <= 1) return;
+        const hint = field.name || field.dom_id || field.control_type;
+        if (hint) field.label = `${field.label} [${hint}]`;
+      });
     }
 
     // builds the request body for the /autofill enpoint

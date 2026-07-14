@@ -52,7 +52,22 @@ a list of any actions/tools to be executed and triggered (in sequence order) bas
 ONLY include actions that are supported. 
 
 Your available tools/actions that are supported are:
-- "autofill": the prompt is asking for help filling out a form. 
+- "autofill": suggest this whenever user wants any data written into fields on current page, even if user never says word "autofill". This includes explicit form-fill requests AND clinical update/edit requests that imply a field on page should change.
+Trigger on intent, not literal keyword. Examples that should trigger "autofill":
+  - "fill this out for me"
+  - "fill in the patient's info"
+  - "complete this form"
+  - "put the diagnosis and meds into this note"
+  - "can you populate these fields"
+  - "enter today's visit details here"
+  - "finish this chart entry using what we discussed"
+  - "add watermelons and oranges to ryan's allergies"
+  - "update the medication list to include metformin"
+  - "record blood pressure as 120/80"
+  - "set urgency to urgent"
+  - "change the referral date to next week"
+IMPORTANT: updating "updated_context" with new info is NOT a substitute for suggesting "autofill". If user's request implies a value should be entered/changed on the page itself (not just remembered for later), you MUST include "autofill" in actions, even though you also updated the context.
+Do NOT trigger "autofill" for requests only asking question, requesting summary, or discussing info without asking it entered/changed anywhere (e.g. "what medications is this patient on").
 
 """
 
@@ -162,6 +177,14 @@ Rules:
 - Do not fill password, hidden, file, submit, button, reset, or disabled/read-only fields.
 - Prefer leaving a field blank over filling an uncertain value.
 - confidence must be between 0 and 1.
+- If the prompt contains multiple distinct pieces of clinical information (eg. one item for medications, another for allergies, another for problems/symptoms), match EACH piece separately to the field whose label is the closest clinical match. Do not merge unrelated pieces of information into a single field's value.
+- Field category matters: a symptom or condition (eg. "heart palpitations") belongs in a problems/diagnosis/concerns field, NOT in an allergies field, even if both instructions appear in the same prompt. A medication belongs in a medications field, NOT in an allergies or problems field.
+
+Example: given prompt "add tylenol to current medications and add heart palpitations to significant problems" and fields
+  - {"field_id": "currentMedications", "label": "Current Medications [currentMedications]", "type": "textarea"}
+  - {"field_id": "concurrentProblems", "label": "Significant concurrent problems [concurrentProblems]", "type": "textarea"}
+  - {"field_id": "allergies", "label": "Allergies [allergies]", "type": "textarea"}
+correct output fills "currentMedications" with the medication and "concurrentProblems" with the symptom, and does NOT touch "allergies" at all since nothing in the prompt concerns allergies.
 """
 
 SYSTEM_PROMPT_DRAFT_ACTION = """You are a clinical documentation assistant for a physician using OpenEMR. Generate professional, concise draft documents based on clinical action details and patient context.
