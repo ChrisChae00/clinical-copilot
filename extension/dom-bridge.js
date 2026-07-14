@@ -32,7 +32,7 @@
       });
     }
 
-    requestAutofill(payload, timeoutMs = 120000) {
+    requestAutofill(payload, timeoutMs = 300000) {
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           window.removeEventListener('message', handler);
