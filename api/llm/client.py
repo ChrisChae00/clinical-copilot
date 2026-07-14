@@ -42,6 +42,7 @@ import httpx
 
 # import values for prod
 from config import (
+    LLM_TIMEOUT,
     MAX_CONTEXT_LEN,
     MODEL_NAME,
     OLLAMA_CF_ACCESS_CLIENT_ID,
@@ -93,10 +94,10 @@ async def get_llm_response_str(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=_llm_timeout()) as client:
             # response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload) -> this is for when we host local ollama (no cloudflare)
             response = await client.post(
-                "{OLLAMA_URL}/api/generate",
+                f"{OLLAMA_URL}/api/generate",
                 json=payload,
                 headers=_ollama_headers(),
             )
@@ -146,7 +147,7 @@ async def get_llm_response_json(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=_llm_timeout()) as client:
             # response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload) -> this is for when we host local ollama (no cloudflare)
             response = await client.post(
                 f"{OLLAMA_URL}/api/generate",
@@ -196,6 +197,18 @@ async def is_ollama_healthy() -> bool:
             f"WARNING: Ollama health check failed (status {e.response.status_code}): {e}"
         )
         return False
+
+
+def _llm_timeout() -> httpx.Timeout:
+    """
+    Helper func to build the httpx timeout for Ollama calls.
+
+    Connect/write/pool stay tight since those failures should surface fast;
+    read is generous (LLM_TIMEOUT, default 300s) since generation for
+    heavy payloads (e.g. autofill scanning a full form) can legitimately
+    take a couple of minutes, especially without GPU acceleration.
+    """
+    return httpx.Timeout(connect=10.0, read=LLM_TIMEOUT, write=30.0, pool=LLM_TIMEOUT)
 
 
 def _ollama_headers() -> dict[str, str]:
