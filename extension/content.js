@@ -410,6 +410,37 @@
         { type: 'PAGE_HTML_RESPONSE', html },
         browser.runtime.getURL('')
       );
+    } else if (event.data.type === 'REQUEST_PAGE_SCREENSHOT') {
+      const capturePageScreenshot = async () => {
+        const previousVisibility = host.style.visibility;
+        host.style.visibility = 'hidden';
+
+        try {
+          await new Promise((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+          });
+
+          const dataUrl = await browser.runtime.sendMessage({ type: 'CAPTURE_VISIBLE_TAB' });
+          const commaIndex = String(dataUrl || '').indexOf(',');
+          return commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl;
+        } finally {
+          host.style.visibility = previousVisibility;
+        }
+      };
+
+      capturePageScreenshot()
+        .then((screenshot_b64) => {
+          iframe.contentWindow.postMessage(
+            { type: 'PAGE_SCREENSHOT_RESPONSE', ok: true, screenshot_b64 },
+            browser.runtime.getURL('')
+          );
+        })
+        .catch((err) => {
+          iframe.contentWindow.postMessage(
+            { type: 'PAGE_SCREENSHOT_RESPONSE', ok: false, error: err.message },
+            browser.runtime.getURL('')
+          );
+        });
     } else if (event.data.type === 'REQUEST_AUTOFILL') {
       if (!window.AutofillManager) {
         iframe.contentWindow.postMessage(

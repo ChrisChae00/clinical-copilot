@@ -2,8 +2,15 @@
   "manifest_version": 3,
   "name": "Clinical Ally",
   "version": "0.1.0",
-  "permissions": [],
+  "permissions": [
+    "activeTab"
+  ],
   "description": "AI co-pilot sidebar for OpenEMR \u2014 runs entirely on localhost",
+  "background": {
+    "scripts": [
+      "screenshot-service.js"
+    ]
+  },
   "content_scripts": [
     {
       "matches": [
