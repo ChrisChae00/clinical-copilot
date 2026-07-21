@@ -410,8 +410,8 @@
         { type: 'PAGE_HTML_RESPONSE', html },
         browser.runtime.getURL('')
       );
-    } else if (event.data.type === 'REQUEST_PAGE_SCREENSHOT') {
-      const capturePageScreenshot = async () => {
+    } else if (event.data.type === 'REQUEST_PAGE_SCREENSHOTS') {
+      const capturePageScreenshots = async () => {
         const previousVisibility = host.style.visibility;
         host.style.visibility = 'hidden';
 
@@ -420,24 +420,54 @@
             requestAnimationFrame(() => requestAnimationFrame(resolve));
           });
 
-          const dataUrl = await browser.runtime.sendMessage({ type: 'CAPTURE_VISIBLE_TAB' });
-          const commaIndex = String(dataUrl || '').indexOf(',');
-          return commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl;
+          const root = document.documentElement;
+          const body = document.body;
+          const pageWidth = Math.ceil(Math.max(
+            window.innerWidth,
+            root?.scrollWidth || 0,
+            body?.scrollWidth || 0
+          ));
+          const maxSegmentHeight = Math.max(1, Math.floor(window.innerHeight));
+          const pageHeight = Math.ceil(Math.max(
+            maxSegmentHeight,
+            root?.scrollHeight || 0,
+            body?.scrollHeight || 0
+          ));
+          const segmentCount = Math.ceil(pageHeight / maxSegmentHeight);
+          const segmentHeight = Math.ceil(pageHeight / segmentCount);
+
+          const screenshots_b64 = [];
+          for (let y = 0; y < pageHeight; y += segmentHeight) {
+            const dataUrl = await browser.runtime.sendMessage({
+              type: 'CAPTURE_PAGE_SEGMENT',
+              rect: {
+                x: 0,
+                y,
+                width: pageWidth,
+                height: Math.min(segmentHeight, pageHeight - y),
+              },
+            });
+            const commaIndex = String(dataUrl || '').indexOf(',');
+            if (commaIndex < 0) throw new Error('Page screenshot capture returned invalid image data.');
+            screenshots_b64.push(dataUrl.slice(commaIndex + 1));
+          }
+
+          return screenshots_b64;
         } finally {
           host.style.visibility = previousVisibility;
         }
       };
 
-      capturePageScreenshot()
-        .then((screenshot_b64) => {
+      capturePageScreenshots()
+        .then((screenshots_b64) => {
           iframe.contentWindow.postMessage(
-            { type: 'PAGE_SCREENSHOT_RESPONSE', ok: true, screenshot_b64 },
+            { type: 'PAGE_SCREENSHOTS_RESPONSE', ok: true, screenshots_b64 },
             browser.runtime.getURL('')
           );
         })
         .catch((err) => {
           iframe.contentWindow.postMessage(
-            { type: 'PAGE_SCREENSHOT_RESPONSE', ok: false, error: err.message },
+            { type: 'PAGE_SCREENSHOTS_RESPONSE', ok: false, error: err.message },
             browser.runtime.getURL('')
           );
         });

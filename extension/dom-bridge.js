@@ -32,29 +32,29 @@
       });
     }
 
-    requestPageScreenshot(timeoutMs = 10000) {
+    requestPageScreenshots(timeoutMs = 60000) {
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           window.removeEventListener('message', handler);
-          reject(new Error('Page screenshot response timed out.'));
+          reject(new Error('Page screenshots response timed out.'));
         }, timeoutMs);
 
         function handler(event) {
           if (event.source !== window.parent) return;
-          if (event.data?.type !== 'PAGE_SCREENSHOT_RESPONSE') return;
+          if (event.data?.type !== 'PAGE_SCREENSHOTS_RESPONSE') return;
 
           clearTimeout(timer);
           window.removeEventListener('message', handler);
 
           if (event.data.ok) {
-            resolve(event.data.screenshot_b64 || null);
+            resolve(Array.isArray(event.data.screenshots_b64) ? event.data.screenshots_b64 : []);
           } else {
-            reject(new Error(event.data.error || 'Page screenshot capture failed.'));
+            reject(new Error(event.data.error || 'Page screenshots capture failed.'));
           }
         }
 
         window.addEventListener('message', handler);
-        window.parent.postMessage({ type: 'REQUEST_PAGE_SCREENSHOT' }, '*');
+        window.parent.postMessage({ type: 'REQUEST_PAGE_SCREENSHOTS' }, '*');
       });
     }
 

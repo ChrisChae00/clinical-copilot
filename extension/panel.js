@@ -195,26 +195,26 @@ form.addEventListener('submit', async (e) => {
   const imagesToSend = imageManager.getImages();
   lastUserPrompt = prompt;
   const includeRawHtml = Boolean(includeHtmlToggle?.checked);
-  const includePageScreenshot = Boolean(includeScreenshotToggle?.checked);
+  const includePageScreenshots = Boolean(includeScreenshotToggle?.checked);
 
   input.value = '';
 
   try {
     const chatContext = await resolveChatContext();
     const raw_html = includeRawHtml ? await domBridge.requestPageHtml() : '';
-    const pageScreenshotB64 = includePageScreenshot
-      ? await domBridge.requestPageScreenshot()
-      : '';
+    const pageScreenshotsB64 = includePageScreenshots
+      ? await domBridge.requestPageScreenshots()
+      : [];
     const images_b64 = imagesToSend.map((image) => image.b64);
     const displayImages = imagesToSend.slice();
 
-    if (pageScreenshotB64) {
-      images_b64.push(pageScreenshotB64);
+    pageScreenshotsB64.forEach((screenshotB64, index) => {
+      images_b64.push(screenshotB64);
       displayImages.push({
-        name: 'Captured page screenshot',
-        dataUrl: `data:image/jpeg;base64,${pageScreenshotB64}`,
+        name: `Captured page segment ${index + 1} of ${pageScreenshotsB64.length}`,
+        dataUrl: `data:image/jpeg;base64,${screenshotB64}`,
       });
-    }
+    });
 
     lastUserImagesB64 = images_b64.slice();
 
