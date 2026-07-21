@@ -11,6 +11,7 @@ const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
+const generateReferralBtn = document.getElementById('generate-referral-btn');
 const contextView = document.getElementById('context-view');
 const includeHtmlToggle = document.getElementById('include-html-toggle');
 const includeScreenshotToggle = document.getElementById('include-screenshot-toggle');
@@ -61,6 +62,70 @@ clearContextBtn.addEventListener('click', async () => {
   contextManager.clearContext();
   if (contextVisible) renderContextView(null);
 });
+
+// ── Referral generation ───────────────────────────────────────
+
+async function runGenerateReferral() {
+  generateReferralBtn.disabled = true;
+  const wasRegenerate = generateReferralBtn.dataset.mode === 'regenerate';
+  generateReferralBtn.textContent = wasRegenerate ? 'Regenerating…' : 'Generating…';
+
+  try {
+    const context = await resolveChatContext();
+    const { draft } = await client.draftAction({
+      action: { type: 'referral', title: 'Referral letter', description: '' },
+      context: context || undefined,
+    });
+    appendReferralDraft(draft);
+    generateReferralBtn.dataset.mode = 'regenerate';
+    generateReferralBtn.textContent = 'Regenerate Referral';
+  } catch (err) {
+    appendMessage(`Error generating referral: ${err.message}`, 'error');
+    generateReferralBtn.textContent = wasRegenerate ? 'Regenerate Referral' : 'Generate Referral';
+  } finally {
+    generateReferralBtn.disabled = false;
+  }
+}
+
+function appendReferralDraft(draft) {
+  const container = document.createElement('div');
+  container.className = 'message assistant referral-card';
+
+  const header = document.createElement('div');
+  header.className = 'actions-header';
+  header.textContent = 'Referral Letter';
+  container.appendChild(header);
+
+  const draftArea = document.createElement('div');
+  draftArea.className = 'action-draft';
+
+  const draftText = document.createElement('textarea');
+  draftText.className = 'action-draft-text';
+  draftText.rows = 12;
+  draftText.value = draft;
+  draftArea.appendChild(draftText);
+
+  const buttonsRow = document.createElement('div');
+  buttonsRow.className = 'action-buttons';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'action-copy-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(draftText.value).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    });
+  });
+  buttonsRow.appendChild(copyBtn);
+  draftArea.appendChild(buttonsRow);
+
+  container.appendChild(draftArea);
+  responseArea.appendChild(container);
+  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+generateReferralBtn.addEventListener('click', runGenerateReferral);
 
 // ── Voice recording ───────────────────────────────────────────
 

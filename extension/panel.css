@@ -300,6 +300,12 @@ body {
   100% { transform: scaleY(1.1); }
 }
 
+/* ── Referral draft card ───────────────────────────────── */
+.message.referral-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* ── Clinical action cards ─────────────────────────────── */
 .message.clinical-actions {
   background: #fff;
