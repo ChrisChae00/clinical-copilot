@@ -174,6 +174,8 @@ Rules:
 - Do not guess missing clinical information.
 - For select, radio, checkbox_group, multiselect, and combobox fields, only use values from the provided options.
 - If no option clearly matches, do not include that field in fills.
+- Never fill a field just because it was filled in a previous turn or exists in stale context — only fill it if the CURRENT prompt or context text explicitly supports that exact value right now.
+- If you cannot point to the specific word or phrase in the prompt/context that justifies a fill, omit that field entirely instead of guessing a plausible-looking value.
 - Do not fill password, hidden, file, submit, button, reset, or disabled/read-only fields.
 - Prefer leaving a field blank over filling an uncertain value.
 - confidence must be between 0 and 1.

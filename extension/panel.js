@@ -128,12 +128,54 @@ async function sendAudioForTranscription(blob) {
     const { segments } = await client.transcribe(blob);
     appendTranscript(segments);
     analyzeTranscript(segments);
+    syncTranscriptToContext(segments);
   } catch (err) {
     appendMessage(`Transcription error: ${err.message}`, 'error');
   } finally {
     setLoading(false);
     voiceBtn.disabled = false;
   }
+}
+
+// Extracts patient/clinical info mentioned during the conversation into the
+// accumulated context, then always offers an autofill suggestion so the user
+// can enter whatever was picked up (eg. "the patient has diabetes") into the
+// form with one click, without needing to ask for it explicitly.
+async function syncTranscriptToContext(segments) {
+  const transcriptText = segments.map(({ speaker, text }) => `${speaker}: ${text}`).join('\n');
+  if (!transcriptText.trim()) return;
+
+  try {
+    const chatContext = await resolveChatContext();
+    const { updated_context } = await client.chat({
+      prompt: 'Extract any new patient or clinical information (diagnoses, symptoms, '
+        + 'medications, allergies, vitals, history, etc.) mentioned in this conversation '
+        + 'transcript and incorporate it into the accumulated context.\n\n'
+        + '### CONVERSATION TRANSCRIPT ###\n' + transcriptText,
+      context: chatContext || undefined,
+    });
+    if (updated_context) contextManager.setContext(updated_context);
+  } catch (err) {
+    appendMessage(`Could not extract context from transcript: ${err.message}`, 'error');
+  }
+
+  const container = document.createElement('div');
+  container.className = 'message assistant action-suggestions';
+
+  const label = document.createElement('div');
+  label.className = 'action-suggestions-label';
+  label.textContent = 'Suggested actions:';
+  container.appendChild(label);
+
+  container.appendChild(createAutofillActionCard(
+    'Fill in any fields supported by the following conversation transcript. '
+      + 'Only use info explicitly mentioned below — do not fill unrelated fields.\n\n'
+      + '### CONVERSATION TRANSCRIPT ###\n' + transcriptText,
+    'Detected patient/clinical details from this conversation. Run this to enter them into the form.',
+  ));
+
+  responseArea.appendChild(container);
+  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
 async function analyzeTranscript(segments) {
@@ -254,7 +296,10 @@ function renderActionSuggestions(actions) {
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
-function createAutofillActionCard() {
+// basePrompt: explicit instructions to seed the autofill run with (eg. a transcript).
+// Pass null (default) to fall back to the last chat message the user typed.
+// Pass '' explicitly to force AutofillManager's own "fill from context only" default.
+function createAutofillActionCard(basePrompt = null, description = null) {
   const card = document.createElement('div');
   card.className = 'autofill-action-card';
 
@@ -263,10 +308,11 @@ function createAutofillActionCard() {
   title.textContent = ACTION_LABELS.autofill;
   card.appendChild(title);
 
-  const description = document.createElement('div');
-  description.className = 'autofill-action-description';
-  description.textContent = 'Run this to scan the current page fields and fill supported values from the current context.';
-  card.appendChild(description);
+  const descriptionEl = document.createElement('div');
+  descriptionEl.className = 'autofill-action-description';
+  descriptionEl.textContent = description
+    || 'Run this to scan the current page fields and fill supported values from the current context.';
+  card.appendChild(descriptionEl);
 
   const extraPrompt = document.createElement('textarea');
   extraPrompt.className = 'autofill-extra-prompt';
@@ -283,7 +329,7 @@ function createAutofillActionCard() {
     runBtn.textContent = 'Running autofill…';
 
     try {
-      await runAutofillAction(extraPrompt.value.trim());
+      await runAutofillAction(extraPrompt.value.trim(), basePrompt);
       runBtn.textContent = 'Autofill complete';
     } catch (err) {
       appendMessage(`Autofill error: ${err.message}`, 'error');
@@ -296,10 +342,10 @@ function createAutofillActionCard() {
   return card;
 }
 
-async function runAutofillAction(extraPrompt) {
+async function runAutofillAction(extraPrompt, basePrompt = null) {
   const context = await resolveChatContext();
   const prompt = [
-    lastUserPrompt,
+    basePrompt === null ? lastUserPrompt : basePrompt,
     extraPrompt ? `Additional autofill instructions: ${extraPrompt}` : '',
   ].filter(Boolean).join('\n\n');
   const images_b64 = [
