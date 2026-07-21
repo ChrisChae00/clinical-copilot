@@ -51,7 +51,7 @@ viewContextBtn.addEventListener('click', async () => {
   contextView.classList.toggle('hidden', !contextVisible);
   viewContextBtn.textContent = contextVisible ? 'Hide context' : 'View context';
   if (contextVisible) {
-    renderContextView(contextManager.getContext());
+    renderContextView(await contextManager.getContext());
   }
 });
 
@@ -213,7 +213,7 @@ function appendTranscript(segments) {
 // ── Chat form ─────────────────────────────────────────────────
 
 async function resolveChatContext() {
-  let context = contextManager.getContext();
+  let context = await contextManager.getContext();
 
   if (!context) {
     const contextObj = await domBridge.requestContext();
