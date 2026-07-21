@@ -31,6 +31,7 @@ your text response to the user's prompt. this can be a direct answer, a summary,
 an updated version of the accumulated context based on the new input. 
 This is meant to be a running record of all interactions and information so far for session continuity.
 This includes patient information, full chat history with you and the user (this one included), encounters, and any other details that are relevant or may be important in the future.
+This will be your knowledge base for future interactions. So any new information such as images, attachments, documents, etc, should be summarized and recorded here for future reference. 
 Use headings to help denote different sections of the context.
 If nothing new is found, it returns the original context. 
 
@@ -44,6 +45,10 @@ Example layout:
 ### CHAT HISTORY ###
 user: ...
 assistant: ...
+
+### INFORMATION AND DOCUMENTS ###
+... image 1 summary ...
+... document 1 summary ...
 
 ... etc ...
 
