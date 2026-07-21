@@ -31,6 +31,7 @@ your text response to the user's prompt. this can be a direct answer, a summary,
 an updated version of the accumulated context based on the new input. 
 This is meant to be a running record of all interactions and information so far for session continuity.
 This includes patient information, full chat history with you and the user (this one included), encounters, and any other details that are relevant or may be important in the future.
+This will be your knowledge base for future interactions. So any new information such as images, attachments, documents, etc, should be summarized and recorded here for future reference. 
 Use headings to help denote different sections of the context.
 If nothing new is found, it returns the original context. 
 
@@ -45,14 +46,21 @@ Example layout:
 user: ...
 assistant: ...
 
+### INFORMATION AND DOCUMENTS ###
+... image 1 summary ...
+... document 1 summary ...
+
 ... etc ...
 
 - actions (list): 
 a list of any actions/tools to be executed and triggered (in sequence order) based on the input, which may be empty if no specific actions are suggested. 
-ONLY include actions that are supported. 
+ONLY include actions that are supported. You are to examine the prompt and context to determine if any actions are needed. 
+When an action is suggested, the user will be prompted to confirm the action before it is executed.
 
 Your available tools/actions that are supported are:
-- "autofill": the prompt is asking for help filling out a form. 
+- "autofill": automatically fill in a web form based on the provided context and instructions.
+The existance of this action in the list will trigger the system to call the autofill function.
+The actual autofilling will by doen by the system, not you. You are only to suggest the action if it is supported and relevant.
 
 """
 

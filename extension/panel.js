@@ -13,6 +13,7 @@ const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const contextView = document.getElementById('context-view');
 const includeHtmlToggle = document.getElementById('include-html-toggle');
+const includeScreenshotToggle = document.getElementById('include-screenshot-toggle');
 const attachImageBtn = document.getElementById('attach-image-btn');
 const imageInput = document.getElementById('image-input');
 const imagePreviewList = document.getElementById('image-preview-list');
@@ -231,26 +232,38 @@ form.addEventListener('submit', async (e) => {
 
   const imagesToSend = imageManager.getImages();
   lastUserPrompt = prompt;
-  lastUserImagesB64 = imagesToSend.map((image) => image.b64);
+  const includeRawHtml = Boolean(includeHtmlToggle?.checked);
+  const includePageScreenshots = Boolean(includeScreenshotToggle?.checked);
 
-  const imageCountLabel = imagesToSend.length
-    ? ` (${imagesToSend.length} image${imagesToSend.length === 1 ? '' : 's'} attached)`
-    : '';
-
-  appendMessage(`${prompt}${imageCountLabel}`, 'user');
   input.value = '';
-  setLoading(true);
 
   try {
     const chatContext = await resolveChatContext();
-    const includeRawHtml = Boolean(includeHtmlToggle?.checked);
     const raw_html = includeRawHtml ? await domBridge.requestPageHtml() : '';
+    const pageScreenshotsB64 = includePageScreenshots
+      ? await domBridge.requestPageScreenshots()
+      : [];
+    const images_b64 = imagesToSend.map((image) => image.b64);
+    const displayImages = imagesToSend.slice();
+
+    pageScreenshotsB64.forEach((screenshotB64, index) => {
+      images_b64.push(screenshotB64);
+      displayImages.push({
+        name: `Captured page segment ${index + 1} of ${pageScreenshotsB64.length}`,
+        dataUrl: `data:image/jpeg;base64,${screenshotB64}`,
+      });
+    });
+
+    lastUserImagesB64 = images_b64.slice();
+
+    appendMessage(prompt, 'user', { images: displayImages });
+    setLoading(true);
 
     const { response, updated_context, actions } = await client.chat({
       prompt,
       context: chatContext || undefined,
       raw_html: raw_html || undefined,
-      images_b64: imagesToSend.length ? imagesToSend.map((image) => image.b64) : undefined,
+      images_b64: images_b64.length ? images_b64 : undefined,
     });
     appendMessage(response, 'assistant');
     imageManager.clear();
@@ -359,10 +372,39 @@ async function runAutofillAction(extraPrompt) {
 
 // ── DOM helpers ───────────────────────────────────────────────
 
-function appendMessage(text, role) {
+function appendMessage(text, role, options = {}) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
-  div.textContent = text;
+
+  if (role === 'user' && Array.isArray(options.images) && options.images.length > 0) {
+    const textEl = document.createElement('div');
+    textEl.className = 'message-text';
+    textEl.textContent = text;
+    div.appendChild(textEl);
+
+    const imagesEl = document.createElement('div');
+    imagesEl.className = 'message-images';
+    options.images.forEach((image) => {
+      const figure = document.createElement('figure');
+      figure.className = 'message-image-item';
+
+      const img = document.createElement('img');
+      img.src = image.dataUrl;
+      img.alt = image.name || 'Attached image';
+      figure.appendChild(img);
+
+      const caption = document.createElement('figcaption');
+      caption.textContent = image.name || 'Attached image';
+      figure.appendChild(caption);
+
+      imagesEl.appendChild(figure);
+    });
+
+    div.appendChild(imagesEl);
+  } else {
+    div.textContent = text;
+  }
+
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
