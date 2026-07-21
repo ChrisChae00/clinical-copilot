@@ -54,10 +54,13 @@ assistant: ...
 
 - actions (list): 
 a list of any actions/tools to be executed and triggered (in sequence order) based on the input, which may be empty if no specific actions are suggested. 
-ONLY include actions that are supported. 
+ONLY include actions that are supported. You are to examine the prompt and context to determine if any actions are needed. 
+When an action is suggested, the user will be prompted to confirm the action before it is executed.
 
 Your available tools/actions that are supported are:
-- "autofill": the prompt is asking for help filling out a form. 
+- "autofill": automatically fill in a web form based on the provided context and instructions.
+The existance of this action in the list will trigger the system to call the autofill function.
+The actual autofilling will by doen by the system, not you. You are only to suggest the action if it is supported and relevant.
 
 """
 
