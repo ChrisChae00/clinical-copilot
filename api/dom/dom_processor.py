@@ -173,10 +173,17 @@ async def clean_dom(raw_html: str) -> str:
     if not cleaned.strip():
         raise RuntimeError("DOM cleaner produced empty markdown")
 
+    print(f"Cleaned markdown length: {len(cleaned.strip())} characters")
+
     return cleaned.strip()
 
 
 def _sanitize_html(raw_html: str) -> BeautifulSoup:
+    # nuke svgs before parsing html
+    raw_html = re.sub(r'<script\b[^>]*>[\s\S]*?</script>', '', raw_html, flags=re.IGNORECASE)
+    raw_html = re.sub(r'<style\b[^>]*>[\s\S]*?</style>', '', raw_html, flags=re.IGNORECASE)
+    raw_html = re.sub(r'<svg\b[^>]*>[\s\S]*?</svg>', '', raw_html, flags=re.IGNORECASE)
+
     soup = _parse_html(raw_html)
 
     _remove_comments(soup)
@@ -597,7 +604,7 @@ def _unwrap_links_keep_visible_text(soup: BeautifulSoup) -> None:
 
         text = _normalize_text(link.get_text(" ", strip=True))
 
-        if not text or UI_NOISE_EXACT_RE.match(text):
+        if not text or UI_NOISE_EXACT_RE.fullmatch(text):
             link.decompose()
         else:
             link.unwrap()
@@ -610,12 +617,16 @@ def _remove_event_and_style_attributes(soup: BeautifulSoup) -> None:
 
         for attr in list(tag.attrs.keys()):
             attr_lower = str(attr).lower()
+            attr_val = str(tag.attrs.get(attr, "")).lower()
 
             if (
                 attr_lower == "style"
                 or attr_lower.startswith("on")
                 or attr_lower in {"href", "src", "target", "rel"}
             ):
+                tag.attrs.pop(attr, None)
+            # nuke base64 images
+            elif "data:image/" in attr_val:
                 tag.attrs.pop(attr, None)
 
 

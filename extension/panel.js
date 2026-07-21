@@ -67,6 +67,8 @@ let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
 let recordingInterval = null;
+let liveTranscriptInterval = null;
+let tempAudioContainer = null;
 
 const recordingIndicator = document.getElementById('recording-visualizer');
 const recordingTimer = document.getElementById('recording-timer');
@@ -83,6 +85,7 @@ voiceBtn.addEventListener('click', async () => {
   audioChunks = [];
   const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
   mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
   
   mediaRecorder.onstop = async () => {
@@ -91,6 +94,7 @@ voiceBtn.addEventListener('click', async () => {
     isRecording = false;
 
     clearInterval(recordingInterval);
+    clearInterval(liveTranscriptInterval);
     recordingIndicator.classList.add('hidden');
     input.classList.remove('hidden');
 
@@ -104,13 +108,40 @@ voiceBtn.addEventListener('click', async () => {
     }
   };
 
-  mediaRecorder.start();
+  mediaRecorder.start(1000);
   isRecording = true;
   voiceBtn.classList.add('recording');
 
   input.classList.add('hidden');
   recordingIndicator.classList.remove('hidden');
 
+  // temp container for live text
+  tempAudioContainer = document.createElement('div');
+  tempAudioContainer.className = 'message transcript temp';
+  tempAudioContainer.style.opacity = '0.6'; // Visually distinguish it as a draft
+  responseArea.appendChild(tempAudioContainer);
+
+  let isTranscribingLive = false;
+  liveTranscriptInterval = setInterval(async () => {
+    // prevent overlapping requests
+    if (audioChunks.length > 0 && !isTranscribingLive) {
+      isTranscribingLive = true;
+      const blob = new Blob(audioChunks, mimeType ? { type: mimeType } : {});
+      try {
+        const { segments } = await client.transcribe(blob);
+        // only update UI if still recording
+        if (isRecording) {
+          renderInterimTranscript(segments, tempAudioContainer);
+        }
+      } catch (err) {
+        console.warn('Live transcription skipped this tick due to error:', err);
+      } finally {
+        isTranscribingLive = false;
+      }
+    }
+  }, 1000);
+
+  // timer logic
   let elapsedSeconds = 0;
   recordingTimer.textContent = '00:00';
   recordingInterval = setInterval(() => {
@@ -118,7 +149,7 @@ voiceBtn.addEventListener('click', async () => {
     const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
     const secs = String(elapsedSeconds % 60).padStart(2, '0');
     recordingTimer.textContent = `${mins}:${secs}`;
-  }, 1000);
+  }, 2000);
 });
 
 async function sendAudioForTranscription(blob) {
@@ -126,6 +157,13 @@ async function sendAudioForTranscription(blob) {
   voiceBtn.disabled = true;
   try {
     const { segments } = await client.transcribe(blob);
+
+    // remove live transcripting container
+    if(tempAudioContainer && tempAudioContainer.parentNode){
+      tempAudioContainer.remove();
+      tempAudioContainer = null;
+    }
+
     appendTranscript(segments);
     analyzeTranscript(segments);
   } catch (err) {
@@ -598,4 +636,19 @@ function setLoading(loading) {
   input.disabled = loading;
   imageManager.setDisabled(loading);
   spinner.classList.toggle('hidden', !loading);
+}
+
+function renderInterimTranscript(segments, container) {
+  container.innerHTML = ''; //clear previous text
+  segments.forEach(({ speaker, text }) => {
+    const line = document.createElement('div');
+    line.className = 'transcript-line';
+    const label = document.createElement('span');
+    label.className = 'speaker-label';
+    label.textContent = `${speaker}: `;
+    line.appendChild(label);
+    line.appendChild(document.createTextNode(text));
+    container.appendChild(line);
+  });
+  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
