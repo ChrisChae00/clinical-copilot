@@ -139,7 +139,7 @@ voiceBtn.addEventListener('click', async () => {
         isTranscribingLive = false;
       }
     }
-  }, 3000);
+  }, 1000);
 
   // timer logic
   let elapsedSeconds = 0;
@@ -149,7 +149,7 @@ voiceBtn.addEventListener('click', async () => {
     const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
     const secs = String(elapsedSeconds % 60).padStart(2, '0');
     recordingTimer.textContent = `${mins}:${secs}`;
-  }, 1000);
+  }, 2000);
 });
 
 async function sendAudioForTranscription(blob) {
