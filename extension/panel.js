@@ -65,6 +65,8 @@ clearContextBtn.addEventListener('click', async () => {
 
 // ── Referral generation ───────────────────────────────────────
 
+let referralDraftText = null;
+
 async function runGenerateReferral() {
   generateReferralBtn.disabled = true;
   const wasRegenerate = generateReferralBtn.dataset.mode === 'regenerate';
@@ -76,7 +78,12 @@ async function runGenerateReferral() {
       action: { type: 'referral', title: 'Referral letter', description: '' },
       context: context || undefined,
     });
-    appendReferralDraft(draft);
+    if (referralDraftText) {
+      referralDraftText.value = draft;
+      referralDraftText.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    } else {
+      referralDraftText = appendReferralDraft(draft);
+    }
     generateReferralBtn.dataset.mode = 'regenerate';
     generateReferralBtn.textContent = 'Regenerate Referral';
   } catch (err) {
@@ -87,6 +94,8 @@ async function runGenerateReferral() {
   }
 }
 
+// Builds the referral draft card and returns its textarea so subsequent
+// regenerations can update it in place instead of stacking new cards.
 function appendReferralDraft(draft) {
   const container = document.createElement('div');
   container.className = 'message assistant referral-card';
@@ -123,6 +132,7 @@ function appendReferralDraft(draft) {
   container.appendChild(draftArea);
   responseArea.appendChild(container);
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return draftText;
 }
 
 generateReferralBtn.addEventListener('click', runGenerateReferral);
