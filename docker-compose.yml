@@ -1,4 +1,6 @@
 services:
+  # profile "local": run Ollama in-container (Mac / no GPU / Nvidia GPU).
+  # No profile (default): use a remote OLLAMA_URL instead — this service is skipped.
   ollama:
     image: ollama/ollama:latest
     container_name: ally-ollama
