@@ -29,7 +29,14 @@ Browser Extension → FastAPI (:8000) → Ollama (:11434)
 Create a `.env` file in the project root:
 
 ```bash
+API_KEY=api-key-placeholder
+MAX_CONTEXT_LEN=8192
+OLLAMA_CF_ACCESS_CLIENT_ID=ollama_client_id_here.access
+OLLAMA_CF_ACCESS_CLIENT_SECRET=ollama_access_secret_here
 HF_TOKEN=hf_your_token_here
+
+OLLAMA_URL=http://ollama:11434
+OLLAMA_MODEL=qwen2.5vl:7b
 ```
 
 To get a HuggingFace token:
