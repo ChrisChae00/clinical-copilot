@@ -15,6 +15,10 @@
     }
 
     setContext(context) {
+      if (context && typeof context !== 'string') {
+        this.context = JSON.stringify(context);
+        return;
+      }
       this.context = context || '';
     }
 

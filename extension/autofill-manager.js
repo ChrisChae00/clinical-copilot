@@ -732,7 +732,8 @@
       const placeholder = this.#cleanText(control.getAttribute('placeholder') || '');
       if (placeholder) return placeholder;
 
-      return this.#cleanText(control.name || control.id || 'Unlabeled field');
+      const humanized = this.#humanizeIdentifier(control.name || control.id);
+      return humanized || 'Unlabeled field';
     }
 
     getRadioGroupLabel(controls) {
@@ -836,6 +837,20 @@
 
     #cleanText(text) {
       return String(text || '').replace(/\s+/g, ' ').trim();
+    }
+
+    // eg. "reasonForConsultation" / "concurrent_problems" -> "Reason For Consultation"
+    // used only as a last-resort label fallback, so the LLM sees readable words instead of a raw attribute name
+    #humanizeIdentifier(identifier) {
+      const text = String(identifier || '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .trim();
+      if (!text) return '';
+      return text
+        .split(/\s+/)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
     }
 
     #getElementTextWithoutControls(element) {
