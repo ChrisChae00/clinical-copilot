@@ -165,11 +165,10 @@ Supported normalized field types and value formats:
 
 Rules:
 - Only fill fields when the value is supported by the prompt or context.
-- Do not guess missing clinical information.
-- For select, radio, checkbox_group, multiselect, and combobox fields, only use values from the provided options.
-- If no option clearly matches, do not include that field in fills.
-- Do not fill password, hidden, file, submit, button, reset, or disabled/read-only fields.
-- Prefer leaving a field blank over filling an uncertain value.
+- For text and textarea fields (e.g., reason for consultation, allergies, concurrent problems), actively extract and fill the relevant details from the context.
+- For select and dropdown fields (e.g., Urgency, Service, Referring Practitioner), select the option matching the context. If the context specifies 'Urgent', actively change the Urgency field from 'Non-Urgent' to 'Urgent'.
+- Only use values that exactly match the provided dropdown options. Do not invent new options.
+- Do not guess missing clinical info or fill password, hidden, file, submit, or disabled fields.
 - confidence must be between 0 and 1.
 """
 
@@ -193,6 +192,7 @@ Generate the appropriate draft document:
 
 Rules:
 - Write in professional clinical language suitable for medical records.
+- Note that the 'Referring Practitioner' (or attending physician) in the EMR context is the author (physician) writing this letter. Address them as 'I' in the body, and use their name in the signature block (do not leave it as [PHYSICIAN NAME]).
 - Use patient details from context where available (name, DOB, diagnoses, medications).
 - Leave clearly marked placeholders like [PATIENT NAME], [DATE], [PHYSICIAN NAME] for any required fields not available in context.
 - Be concise but complete — include the clinical rationale.
