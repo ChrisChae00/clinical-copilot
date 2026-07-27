@@ -26,10 +26,24 @@ Browser Extension → FastAPI (:8000) → Ollama (:11434)
 
 ### 1 — Configure environment variables
 
-Create a `.env` file in the project root:
+Copy `.env.example` to `.env` and fill it in:
 
 ```bash
+cp .env.example .env
+```
+
+```bash
+API_KEY=api-key-placeholder
+MAX_CONTEXT_LEN=8192
 HF_TOKEN=hf_your_token_here
+
+# Local (in-container Ollama, see step 2):
+OLLAMA_URL=http://ollama:11434
+OLLAMA_MODEL=qwen2.5vl:7b
+
+# Remote only — Ollama reachable behind Cloudflare Access:
+OLLAMA_CF_ACCESS_CLIENT_ID=ollama_client_id_here.access
+OLLAMA_CF_ACCESS_CLIENT_SECRET=ollama_access_secret_here
 ```
 
 To get a HuggingFace token:
@@ -42,22 +56,36 @@ To get a HuggingFace token:
 
 ### 2 — Start the API server
 
-The API server runs in Docker and includes Ollama.
+Clinical Ally can run Ollama **locally in Docker**, or point at a **remote** Ollama endpoint you already run elsewhere.
 
-**Mac / no GPU:**
+**Local — Mac / no GPU:**
 ```bash
-docker compose up --build
+docker compose --profile local up --build
 ```
 
-**Linux with Nvidia GPU (WSL2):**
+**Local — Linux with Nvidia GPU (WSL2):**
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+docker compose --profile local -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
 Then pull the model (may take a while):
 
 ```bash
 docker compose exec ollama ollama pull qwen2.5vl:7b 
+```
+
+**Remote (Ollama already running elsewhere):**
+
+Set `OLLAMA_URL` in `.env` to the remote endpoint, then start the API server without the `local` profile — the `ollama` service is skipped entirely:
+
+```bash
+docker compose up --build
+```
+
+If your remote/local setups need different env files, keep separate files (e.g. `.env`, `.env.remote`) and pick one at launch with `ENV_FILE`:
+
+```bash
+ENV_FILE=.env.remote docker compose up --build
 ```
 
 Verify: `curl -s http://localhost:8000/docs` should open the FastAPI docs.

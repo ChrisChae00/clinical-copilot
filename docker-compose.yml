@@ -1,13 +1,16 @@
 services:
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   container_name: ally-ollama
-  #   ports:
-  #     - "11434:11434"
-  #   environment:
-  #     OLLAMA_HOST: 0.0.0.0:11434
-  #   volumes:
-  #     - ollama_data:/root/.ollama
+  # profile "local": run Ollama in-container (Mac / no GPU / Nvidia GPU).
+  # No profile (default): use a remote OLLAMA_URL instead — this service is skipped.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ally-ollama
+    profiles: ["local"]
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ollama_data:/root/.ollama
 
 
   api-server:
@@ -16,7 +19,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - .env
+      - ${ENV_FILE:-.env}
     environment:
       OLLAMA_URL: ${OLLAMA_URL}
       API_KEY: ${API_KEY}
@@ -32,10 +35,8 @@ services:
       - ./api:/app
       - whisperx_models:/root/.cache/huggingface
       - torch_models:/root/.cache/torch
-    # depends_on:
-    #   - ollama
 
 volumes:
-  # ollama_data:
+  ollama_data:
   whisperx_models:
   torch_models:
