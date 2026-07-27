@@ -19,12 +19,17 @@
 
     <div id="panel-layout">
       <div id="panel-main">
-        <main id="panel-body">
+        <div id="context-bar">
           <div id="context-controls" aria-label="Context controls">
             <button id="view-context-btn" type="button">View context</button>
             <button id="clear-context-btn" type="button">Clear context</button>
+            <button id="generate-referral-btn" type="button">Generate Referral</button>
+            <span id="context-status" class="hidden" role="status" aria-live="polite"></span>
           </div>
           <pre id="context-view" class="context-view hidden" aria-label="Stored context"></pre>
+        </div>
+
+        <main id="panel-body">
           <div id="response-area" aria-live="polite" aria-label="AI responses"></div>
           <div id="spinner" class="spinner hidden" aria-label="Loading"></div>
         </main>

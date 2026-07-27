@@ -11,7 +11,9 @@ const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
+const generateReferralBtn = document.getElementById('generate-referral-btn');
 const contextView = document.getElementById('context-view');
+const contextStatus = document.getElementById('context-status');
 const includeHtmlToggle = document.getElementById('include-html-toggle');
 const includeScreenshotToggle = document.getElementById('include-screenshot-toggle');
 const attachImageBtn = document.getElementById('attach-image-btn');
@@ -41,6 +43,21 @@ function renderContextView(context) {
   contextView.textContent = context;
 }
 
+let contextStatusTimer = null;
+
+// Brief confirmation next to the context buttons (e.g. after clearing).
+function showContextStatus(message) {
+  clearTimeout(contextStatusTimer);
+  contextStatus.textContent = message;
+  contextStatus.classList.remove('hidden', 'fading');
+  contextStatusTimer = setTimeout(() => {
+    contextStatus.classList.add('fading');
+    contextStatusTimer = setTimeout(() => {
+      contextStatus.classList.add('hidden');
+    }, 400);
+  }, 1600);
+}
+
 closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
 });
@@ -57,10 +74,102 @@ viewContextBtn.addEventListener('click', async () => {
 });
 
 
-clearContextBtn.addEventListener('click', async () => {
+clearContextBtn.addEventListener('click', () => {
   contextManager.clearContext();
   if (contextVisible) renderContextView(null);
+  showContextStatus('Context cleared ✓');
 });
+
+// ── Referral generation ───────────────────────────────────────
+
+let referralDraftText = null;
+let referralDraftCard = null;
+let referralPulseTimer = null;
+
+// Scrolls the whole draft card into view and flashes it so the user can see
+// that a draft was just created or replaced.
+function focusReferralCard(card) {
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  clearTimeout(referralPulseTimer);
+  card.classList.remove('highlight-pulse');
+  void card.offsetWidth; // force reflow so repeat clicks restart the animation
+  card.classList.add('highlight-pulse');
+  referralPulseTimer = setTimeout(() => {
+    card.classList.remove('highlight-pulse');
+  }, 1500);
+}
+
+async function runGenerateReferral() {
+  generateReferralBtn.disabled = true;
+  const wasRegenerate = generateReferralBtn.dataset.mode === 'regenerate';
+  generateReferralBtn.textContent = wasRegenerate ? 'Regenerating…' : 'Generating…';
+
+  try {
+    const context = await resolveChatContext();
+    const { draft } = await client.draftAction({
+      action: { type: 'referral', title: 'Referral letter', description: '' },
+      context: context || undefined,
+    });
+    if (referralDraftText) {
+      referralDraftText.value = draft;
+    } else {
+      const created = appendReferralDraft(draft);
+      referralDraftText = created.textarea;
+      referralDraftCard = created.card;
+    }
+    focusReferralCard(referralDraftCard);
+    generateReferralBtn.dataset.mode = 'regenerate';
+    generateReferralBtn.textContent = 'Regenerate Referral';
+  } catch (err) {
+    appendMessage(`Error generating referral: ${err.message}`, 'error');
+    generateReferralBtn.textContent = wasRegenerate ? 'Regenerate Referral' : 'Generate Referral';
+  } finally {
+    generateReferralBtn.disabled = false;
+  }
+}
+
+// Builds the referral draft card and returns { card, textarea } so subsequent
+// regenerations can update it in place instead of stacking new cards.
+function appendReferralDraft(draft) {
+  const container = document.createElement('div');
+  container.className = 'message assistant referral-card';
+
+  const header = document.createElement('div');
+  header.className = 'actions-header';
+  header.textContent = 'Referral Letter';
+  container.appendChild(header);
+
+  const draftArea = document.createElement('div');
+  draftArea.className = 'action-draft';
+
+  const draftText = document.createElement('textarea');
+  draftText.className = 'action-draft-text';
+  draftText.rows = 12;
+  draftText.value = draft;
+  draftArea.appendChild(draftText);
+
+  const buttonsRow = document.createElement('div');
+  buttonsRow.className = 'action-buttons';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'action-copy-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(draftText.value).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    });
+  });
+  buttonsRow.appendChild(copyBtn);
+  draftArea.appendChild(buttonsRow);
+
+  container.appendChild(draftArea);
+  responseArea.appendChild(container);
+  return { card: container, textarea: draftText };
+}
+
+generateReferralBtn.addEventListener('click', runGenerateReferral);
 
 // ── Voice recording ───────────────────────────────────────────
 
