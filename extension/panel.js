@@ -13,6 +13,7 @@ const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
 const generateReferralBtn = document.getElementById('generate-referral-btn');
 const contextView = document.getElementById('context-view');
+const contextStatus = document.getElementById('context-status');
 const includeHtmlToggle = document.getElementById('include-html-toggle');
 const includeScreenshotToggle = document.getElementById('include-screenshot-toggle');
 const attachImageBtn = document.getElementById('attach-image-btn');
@@ -42,6 +43,21 @@ function renderContextView(context) {
   contextView.textContent = context;
 }
 
+let contextStatusTimer = null;
+
+// Brief confirmation next to the context buttons (e.g. after clearing).
+function showContextStatus(message) {
+  clearTimeout(contextStatusTimer);
+  contextStatus.textContent = message;
+  contextStatus.classList.remove('hidden', 'fading');
+  contextStatusTimer = setTimeout(() => {
+    contextStatus.classList.add('fading');
+    contextStatusTimer = setTimeout(() => {
+      contextStatus.classList.add('hidden');
+    }, 400);
+  }, 1600);
+}
+
 closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
 });
@@ -58,14 +74,31 @@ viewContextBtn.addEventListener('click', async () => {
 });
 
 
-clearContextBtn.addEventListener('click', async () => {
+clearContextBtn.addEventListener('click', () => {
   contextManager.clearContext();
   if (contextVisible) renderContextView(null);
+  showContextStatus('Context cleared ✓');
 });
 
 // ── Referral generation ───────────────────────────────────────
 
 let referralDraftText = null;
+let referralDraftCard = null;
+let referralPulseTimer = null;
+
+// Scrolls the whole draft card into view and flashes it so the user can see
+// that a draft was just created or replaced.
+function focusReferralCard(card) {
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  clearTimeout(referralPulseTimer);
+  card.classList.remove('highlight-pulse');
+  void card.offsetWidth; // force reflow so repeat clicks restart the animation
+  card.classList.add('highlight-pulse');
+  referralPulseTimer = setTimeout(() => {
+    card.classList.remove('highlight-pulse');
+  }, 1500);
+}
 
 async function runGenerateReferral() {
   generateReferralBtn.disabled = true;
@@ -80,10 +113,12 @@ async function runGenerateReferral() {
     });
     if (referralDraftText) {
       referralDraftText.value = draft;
-      referralDraftText.scrollIntoView({ behavior: 'smooth', block: 'end' });
     } else {
-      referralDraftText = appendReferralDraft(draft);
+      const created = appendReferralDraft(draft);
+      referralDraftText = created.textarea;
+      referralDraftCard = created.card;
     }
+    focusReferralCard(referralDraftCard);
     generateReferralBtn.dataset.mode = 'regenerate';
     generateReferralBtn.textContent = 'Regenerate Referral';
   } catch (err) {
@@ -94,7 +129,7 @@ async function runGenerateReferral() {
   }
 }
 
-// Builds the referral draft card and returns its textarea so subsequent
+// Builds the referral draft card and returns { card, textarea } so subsequent
 // regenerations can update it in place instead of stacking new cards.
 function appendReferralDraft(draft) {
   const container = document.createElement('div');
@@ -131,8 +166,7 @@ function appendReferralDraft(draft) {
 
   container.appendChild(draftArea);
   responseArea.appendChild(container);
-  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  return draftText;
+  return { card: container, textarea: draftText };
 }
 
 generateReferralBtn.addEventListener('click', runGenerateReferral);

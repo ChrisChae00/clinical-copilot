@@ -306,6 +306,21 @@ body {
   box-sizing: border-box;
 }
 
+/* Flashes when a draft is created or regenerated, fading back to the
+   .message.assistant defaults (#fff / #e2e8f0). */
+.highlight-pulse {
+  animation: highlight-pulse 1.5s ease-out 1;
+}
+
+@keyframes highlight-pulse {
+  0%   { background-color: rgba(0, 102, 204, 0.1); border-color: #0066cc; }
+  100% { background-color: #fff; border-color: #e2e8f0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .highlight-pulse { animation-duration: 0.01s; }
+}
+
 /* ── Clinical action cards ─────────────────────────────── */
 .message.clinical-actions {
   background: #fff;
@@ -602,10 +617,36 @@ body {
 }
 
 /* ── Context controls ──────────────────────────────────── */
+/* Fixed toolbar between the header and the scrolling message list, so the
+   controls and the context view stay visible no matter how long the chat is. */
+#context-bar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
 #context-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  align-items: center;
+}
+
+#context-status {
+  font-size: 11px;
+  font-weight: 600;
+  color: #15803d;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+#context-status.fading {
+  opacity: 0;
 }
 
 #context-controls button {
@@ -636,8 +677,9 @@ body {
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
-  max-height: 200px;
+  max-height: 30vh;
   overflow-y: auto;
+  margin: 0;
 }
 
 .autofill-title {
