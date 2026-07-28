@@ -16,7 +16,7 @@ Browser Extension → FastAPI (:8000) → Ollama (:11434)
       (Firefox)        (proxy)          (local LLM)
 ```
 
-## Key Engineering Achievements (Google XYZ Method)
+## Key Engineering Achievements
 
 - **Optimized Local Host Resource & Performance:** Eliminated local machine CPU/GPU bottlenecks and reduced inference timeout errors to 0% by migrating the local Ollama connection to a remote private GPU server routed through Cloudflare Access tunnels.
 - **Improved EMR Form Autofill Accuracy:** Achieved a 95%+ successful element mapping rate on legacy table-based EMR structures—reducing physician administrative work from 15 minutes to under 10 seconds—by building a hierarchical DOM label parser and streamlining the LLM prompt-engineering rules.
