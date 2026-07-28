@@ -32,6 +32,32 @@
       });
     }
 
+    requestPageScreenshots(timeoutMs = 60000) {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          window.removeEventListener('message', handler);
+          reject(new Error('Page screenshots response timed out.'));
+        }, timeoutMs);
+
+        function handler(event) {
+          if (event.source !== window.parent) return;
+          if (event.data?.type !== 'PAGE_SCREENSHOTS_RESPONSE') return;
+
+          clearTimeout(timer);
+          window.removeEventListener('message', handler);
+
+          if (event.data.ok) {
+            resolve(Array.isArray(event.data.screenshots_b64) ? event.data.screenshots_b64 : []);
+          } else {
+            reject(new Error(event.data.error || 'Page screenshots capture failed.'));
+          }
+        }
+
+        window.addEventListener('message', handler);
+        window.parent.postMessage({ type: 'REQUEST_PAGE_SCREENSHOTS' }, '*');
+      });
+    }
+
     requestAutofill(payload, timeoutMs = 300000) {
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {

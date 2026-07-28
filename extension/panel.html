@@ -19,12 +19,17 @@
 
     <div id="panel-layout">
       <div id="panel-main">
-        <main id="panel-body">
+        <div id="context-bar">
           <div id="context-controls" aria-label="Context controls">
             <button id="view-context-btn" type="button">View context</button>
             <button id="clear-context-btn" type="button">Clear context</button>
+            <button id="generate-referral-btn" type="button">Generate Referral</button>
+            <span id="context-status" class="hidden" role="status" aria-live="polite"></span>
           </div>
           <pre id="context-view" class="context-view hidden" aria-label="Stored context"></pre>
+        </div>
+
+        <main id="panel-body">
           <div id="response-area" aria-live="polite" aria-label="AI responses"></div>
           <div id="spinner" class="spinner hidden" aria-label="Loading"></div>
         </main>
@@ -34,6 +39,10 @@
             <label class="toggle-control" for="include-html-toggle">
               <input id="include-html-toggle" type="checkbox" />
               <span>Include current page HTML</span>
+            </label>
+            <label class="toggle-control" for="include-screenshot-toggle">
+              <input id="include-screenshot-toggle" type="checkbox" />
+              <span>Include current page screenshot</span>
             </label>
           </div>
           <div id="image-preview-list" class="image-preview-list hidden" aria-label="Attached images"></div>

@@ -11,8 +11,11 @@ const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
+const generateReferralBtn = document.getElementById('generate-referral-btn');
 const contextView = document.getElementById('context-view');
+const contextStatus = document.getElementById('context-status');
 const includeHtmlToggle = document.getElementById('include-html-toggle');
+const includeScreenshotToggle = document.getElementById('include-screenshot-toggle');
 const attachImageBtn = document.getElementById('attach-image-btn');
 const imageInput = document.getElementById('image-input');
 const imagePreviewList = document.getElementById('image-preview-list');
@@ -40,6 +43,21 @@ function renderContextView(context) {
   contextView.textContent = context;
 }
 
+let contextStatusTimer = null;
+
+// Brief confirmation next to the context buttons (e.g. after clearing).
+function showContextStatus(message) {
+  clearTimeout(contextStatusTimer);
+  contextStatus.textContent = message;
+  contextStatus.classList.remove('hidden', 'fading');
+  contextStatusTimer = setTimeout(() => {
+    contextStatus.classList.add('fading');
+    contextStatusTimer = setTimeout(() => {
+      contextStatus.classList.add('hidden');
+    }, 400);
+  }, 1600);
+}
+
 closeBtn.addEventListener('click', () => {
   window.parent.postMessage({ type: 'CLINICAL_ALLY_CLOSE' }, '*');
 });
@@ -51,15 +69,107 @@ viewContextBtn.addEventListener('click', async () => {
   contextView.classList.toggle('hidden', !contextVisible);
   viewContextBtn.textContent = contextVisible ? 'Hide context' : 'View context';
   if (contextVisible) {
-    renderContextView(contextManager.getContext());
+    renderContextView(await contextManager.getContext());
   }
 });
 
 
-clearContextBtn.addEventListener('click', async () => {
+clearContextBtn.addEventListener('click', () => {
   contextManager.clearContext();
   if (contextVisible) renderContextView(null);
+  showContextStatus('Context cleared ✓');
 });
+
+// ── Referral generation ───────────────────────────────────────
+
+let referralDraftText = null;
+let referralDraftCard = null;
+let referralPulseTimer = null;
+
+// Scrolls the whole draft card into view and flashes it so the user can see
+// that a draft was just created or replaced.
+function focusReferralCard(card) {
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  clearTimeout(referralPulseTimer);
+  card.classList.remove('highlight-pulse');
+  void card.offsetWidth; // force reflow so repeat clicks restart the animation
+  card.classList.add('highlight-pulse');
+  referralPulseTimer = setTimeout(() => {
+    card.classList.remove('highlight-pulse');
+  }, 1500);
+}
+
+async function runGenerateReferral() {
+  generateReferralBtn.disabled = true;
+  const wasRegenerate = generateReferralBtn.dataset.mode === 'regenerate';
+  generateReferralBtn.textContent = wasRegenerate ? 'Regenerating…' : 'Generating…';
+
+  try {
+    const context = await resolveChatContext();
+    const { draft } = await client.draftAction({
+      action: { type: 'referral', title: 'Referral letter', description: '' },
+      context: context || undefined,
+    });
+    if (referralDraftText) {
+      referralDraftText.value = draft;
+    } else {
+      const created = appendReferralDraft(draft);
+      referralDraftText = created.textarea;
+      referralDraftCard = created.card;
+    }
+    focusReferralCard(referralDraftCard);
+    generateReferralBtn.dataset.mode = 'regenerate';
+    generateReferralBtn.textContent = 'Regenerate Referral';
+  } catch (err) {
+    appendMessage(`Error generating referral: ${err.message}`, 'error');
+    generateReferralBtn.textContent = wasRegenerate ? 'Regenerate Referral' : 'Generate Referral';
+  } finally {
+    generateReferralBtn.disabled = false;
+  }
+}
+
+// Builds the referral draft card and returns { card, textarea } so subsequent
+// regenerations can update it in place instead of stacking new cards.
+function appendReferralDraft(draft) {
+  const container = document.createElement('div');
+  container.className = 'message assistant referral-card';
+
+  const header = document.createElement('div');
+  header.className = 'actions-header';
+  header.textContent = 'Referral Letter';
+  container.appendChild(header);
+
+  const draftArea = document.createElement('div');
+  draftArea.className = 'action-draft';
+
+  const draftText = document.createElement('textarea');
+  draftText.className = 'action-draft-text';
+  draftText.rows = 12;
+  draftText.value = draft;
+  draftArea.appendChild(draftText);
+
+  const buttonsRow = document.createElement('div');
+  buttonsRow.className = 'action-buttons';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'action-copy-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(draftText.value).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    });
+  });
+  buttonsRow.appendChild(copyBtn);
+  draftArea.appendChild(buttonsRow);
+
+  container.appendChild(draftArea);
+  responseArea.appendChild(container);
+  return { card: container, textarea: draftText };
+}
+
+generateReferralBtn.addEventListener('click', runGenerateReferral);
 
 // ── Voice recording ───────────────────────────────────────────
 
@@ -67,6 +177,8 @@ let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
 let recordingInterval = null;
+let liveTranscriptInterval = null;
+let tempAudioContainer = null;
 
 const recordingIndicator = document.getElementById('recording-visualizer');
 const recordingTimer = document.getElementById('recording-timer');
@@ -83,6 +195,7 @@ voiceBtn.addEventListener('click', async () => {
   audioChunks = [];
   const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
   mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
   
   mediaRecorder.onstop = async () => {
@@ -91,6 +204,7 @@ voiceBtn.addEventListener('click', async () => {
     isRecording = false;
 
     clearInterval(recordingInterval);
+    clearInterval(liveTranscriptInterval);
     recordingIndicator.classList.add('hidden');
     input.classList.remove('hidden');
 
@@ -104,13 +218,40 @@ voiceBtn.addEventListener('click', async () => {
     }
   };
 
-  mediaRecorder.start();
+  mediaRecorder.start(1000);
   isRecording = true;
   voiceBtn.classList.add('recording');
 
   input.classList.add('hidden');
   recordingIndicator.classList.remove('hidden');
 
+  // temp container for live text
+  tempAudioContainer = document.createElement('div');
+  tempAudioContainer.className = 'message transcript temp';
+  tempAudioContainer.style.opacity = '0.6'; // Visually distinguish it as a draft
+  responseArea.appendChild(tempAudioContainer);
+
+  let isTranscribingLive = false;
+  liveTranscriptInterval = setInterval(async () => {
+    // prevent overlapping requests
+    if (audioChunks.length > 0 && !isTranscribingLive) {
+      isTranscribingLive = true;
+      const blob = new Blob(audioChunks, mimeType ? { type: mimeType } : {});
+      try {
+        const { segments } = await client.transcribe(blob);
+        // only update UI if still recording
+        if (isRecording) {
+          renderInterimTranscript(segments, tempAudioContainer);
+        }
+      } catch (err) {
+        console.warn('Live transcription skipped this tick due to error:', err);
+      } finally {
+        isTranscribingLive = false;
+      }
+    }
+  }, 1000);
+
+  // timer logic
   let elapsedSeconds = 0;
   recordingTimer.textContent = '00:00';
   recordingInterval = setInterval(() => {
@@ -118,7 +259,7 @@ voiceBtn.addEventListener('click', async () => {
     const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
     const secs = String(elapsedSeconds % 60).padStart(2, '0');
     recordingTimer.textContent = `${mins}:${secs}`;
-  }, 1000);
+  }, 2000);
 });
 
 async function sendAudioForTranscription(blob) {
@@ -126,6 +267,13 @@ async function sendAudioForTranscription(blob) {
   voiceBtn.disabled = true;
   try {
     const { segments } = await client.transcribe(blob);
+
+    // remove live transcripting container
+    if(tempAudioContainer && tempAudioContainer.parentNode){
+      tempAudioContainer.remove();
+      tempAudioContainer = null;
+    }
+
     appendTranscript(segments);
     analyzeTranscript(segments);
     syncTranscriptToContext(segments);
@@ -217,7 +365,7 @@ function appendTranscript(segments) {
 // ── Chat form ─────────────────────────────────────────────────
 
 async function resolveChatContext() {
-  let context = contextManager.getContext();
+  let context = await contextManager.getContext();
 
   if (!context) {
     const contextObj = await domBridge.requestContext();
@@ -235,26 +383,38 @@ form.addEventListener('submit', async (e) => {
 
   const imagesToSend = imageManager.getImages();
   lastUserPrompt = prompt;
-  lastUserImagesB64 = imagesToSend.map((image) => image.b64);
+  const includeRawHtml = Boolean(includeHtmlToggle?.checked);
+  const includePageScreenshots = Boolean(includeScreenshotToggle?.checked);
 
-  const imageCountLabel = imagesToSend.length
-    ? ` (${imagesToSend.length} image${imagesToSend.length === 1 ? '' : 's'} attached)`
-    : '';
-
-  appendMessage(`${prompt}${imageCountLabel}`, 'user');
   input.value = '';
-  setLoading(true);
 
   try {
     const chatContext = await resolveChatContext();
-    const includeRawHtml = Boolean(includeHtmlToggle?.checked);
     const raw_html = includeRawHtml ? await domBridge.requestPageHtml() : '';
+    const pageScreenshotsB64 = includePageScreenshots
+      ? await domBridge.requestPageScreenshots()
+      : [];
+    const images_b64 = imagesToSend.map((image) => image.b64);
+    const displayImages = imagesToSend.slice();
+
+    pageScreenshotsB64.forEach((screenshotB64, index) => {
+      images_b64.push(screenshotB64);
+      displayImages.push({
+        name: `Captured page segment ${index + 1} of ${pageScreenshotsB64.length}`,
+        dataUrl: `data:image/jpeg;base64,${screenshotB64}`,
+      });
+    });
+
+    lastUserImagesB64 = images_b64.slice();
+
+    appendMessage(prompt, 'user', { images: displayImages });
+    setLoading(true);
 
     const { response, updated_context, actions } = await client.chat({
       prompt,
       context: chatContext || undefined,
       raw_html: raw_html || undefined,
-      images_b64: imagesToSend.length ? imagesToSend.map((image) => image.b64) : undefined,
+      images_b64: images_b64.length ? images_b64 : undefined,
     });
     appendMessage(response, 'assistant');
     imageManager.clear();
@@ -367,10 +527,39 @@ async function runAutofillAction(extraPrompt, basePrompt = null) {
 
 // ── DOM helpers ───────────────────────────────────────────────
 
-function appendMessage(text, role) {
+function appendMessage(text, role, options = {}) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
-  div.textContent = text;
+
+  if (role === 'user' && Array.isArray(options.images) && options.images.length > 0) {
+    const textEl = document.createElement('div');
+    textEl.className = 'message-text';
+    textEl.textContent = text;
+    div.appendChild(textEl);
+
+    const imagesEl = document.createElement('div');
+    imagesEl.className = 'message-images';
+    options.images.forEach((image) => {
+      const figure = document.createElement('figure');
+      figure.className = 'message-image-item';
+
+      const img = document.createElement('img');
+      img.src = image.dataUrl;
+      img.alt = image.name || 'Attached image';
+      figure.appendChild(img);
+
+      const caption = document.createElement('figcaption');
+      caption.textContent = image.name || 'Attached image';
+      figure.appendChild(caption);
+
+      imagesEl.appendChild(figure);
+    });
+
+    div.appendChild(imagesEl);
+  } else {
+    div.textContent = text;
+  }
+
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
@@ -644,4 +833,19 @@ function setLoading(loading) {
   input.disabled = loading;
   imageManager.setDisabled(loading);
   spinner.classList.toggle('hidden', !loading);
+}
+
+function renderInterimTranscript(segments, container) {
+  container.innerHTML = ''; //clear previous text
+  segments.forEach(({ speaker, text }) => {
+    const line = document.createElement('div');
+    line.className = 'transcript-line';
+    const label = document.createElement('span');
+    label.className = 'speaker-label';
+    label.textContent = `${speaker}: `;
+    line.appendChild(label);
+    line.appendChild(document.createTextNode(text));
+    container.appendChild(line);
+  });
+  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }

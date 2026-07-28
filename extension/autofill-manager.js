@@ -767,9 +767,24 @@
 
       const cells = Array.from(row.children).filter((child) => ['TD', 'TH'].includes(child.tagName));
       const index = cells.indexOf(cell);
+      
+      // 1. Try checking left cells in the same row
       for (let i = index - 1; i >= 0; i -= 1) {
         const candidate = this.#getElementTextWithoutControls(cells[i]);
         if (candidate) return candidate;
+      }
+
+      // 2. Try checking the row directly above (common in OSCAR EMR for large textareas)
+      const prevRow = row.previousElementSibling;
+      if (prevRow && prevRow.tagName === 'TR') {
+        const prevRowCells = Array.from(prevRow.children).filter((child) => ['TD', 'TH'].includes(child.tagName));
+        if (prevRowCells.length === 1) {
+          const candidate = this.#getElementTextWithoutControls(prevRowCells[0]);
+          if (candidate) return candidate;
+        } else if (prevRowCells[index]) {
+          const candidate = this.#getElementTextWithoutControls(prevRowCells[index]);
+          if (candidate) return candidate;
+        }
       }
 
       const firstCell = this.#getElementTextWithoutControls(cells[0]);
