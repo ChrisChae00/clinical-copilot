@@ -138,4 +138,11 @@ async def _get_chat_response(
         system_prompt=CHAT_SYSTEM_PROMPT, prompt=prompt, images_b64=images_b64
     )
 
+    # the local model doesn't always honor the "updated_context must be a string"
+    # instruction (eg. emits a nested object mirroring the ##patient info## heading) —
+    # coerce here so downstream consumers (autofill, context storage) never choke on it
+    updated_context = response.get("updated_context")
+    if updated_context is not None and not isinstance(updated_context, str):
+        response["updated_context"] = json.dumps(updated_context, ensure_ascii=False)
+
     return response
