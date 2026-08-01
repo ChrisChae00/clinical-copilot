@@ -32,11 +32,7 @@
     }
 
     setContext(context) {
-      if (context && typeof context !== 'string') {
-        this.context = JSON.stringify(context);
-        return;
-      }
-      this.context = context || '';
+      this.context = context && typeof context !== 'string' ? JSON.stringify(context) : (context || '');
       this.updatedAt = Date.now();
       this.broadcastContext();
       this.resolveReady();
