@@ -39,8 +39,6 @@ for reference, example ollama response structure:
 import json
 
 import httpx
-
-# import values for prod
 from config import (
     LLM_TIMEOUT,
     MAX_CONTEXT_LEN,
@@ -49,15 +47,6 @@ from config import (
     OLLAMA_CF_ACCESS_CLIENT_SECRET,
     OLLAMA_URL,
 )
-
-# FOR TESTING PURPOSES
-# test values for running this file by itself (w.o docker)
-# will be overridden in prod by values from config.py
-# MAX_CONTEXT_LEN = 8192
-# MODEL_NAME = "qwen2.5vl:7b"
-# OLLAMA_URL = "http://localhost:11434"
-# OLLAMA_CF_ACCESS_CLIENT_ID = insert
-# OLLAMA_CF_ACCESS_CLIENT_SECRET = insert
 
 
 async def get_llm_response_str(
@@ -95,7 +84,6 @@ async def get_llm_response_str(
 
     try:
         async with httpx.AsyncClient(timeout=_llm_timeout()) as client:
-            # response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload) -> this is for when we host local ollama (no cloudflare)
             response = await client.post(
                 f"{OLLAMA_URL}/api/generate",
                 json=payload,
@@ -148,7 +136,6 @@ async def get_llm_response_json(
 
     try:
         async with httpx.AsyncClient(timeout=_llm_timeout()) as client:
-            # response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload) -> this is for when we host local ollama (no cloudflare)
             response = await client.post(
                 f"{OLLAMA_URL}/api/generate",
                 json=payload,
@@ -182,7 +169,6 @@ async def is_ollama_healthy() -> bool:
     """
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            # response = await client.get(f"{OLLAMA_URL}/api/tags") -> this is for when we host local ollama (no cloudflare)
             response = await client.get(
                 f"{OLLAMA_URL}/api/tags",
                 headers=_ollama_headers(),
@@ -222,35 +208,3 @@ def _ollama_headers() -> dict[str, str]:
         headers["CF-Access-Client-Secret"] = OLLAMA_CF_ACCESS_CLIENT_SECRET
 
     return headers
-
-
-# FOR TESTING PURPOSES
-# if __name__ == "__main__":
-
-#     import asyncio
-
-#     prompt = "who is my patient? give me all the info"
-
-#     context = """
-#         current_medications: Lisinopril,Metformin
-#     """
-#     image_path = "tests/test_report.png"
-
-#     with open("tests/testpage1.html", "r", encoding="utf-8") as f:
-#         raw_html = f.read()
-
-#     with open(image_path, "rb") as f:
-#         image_bytes = f.read()
-#     import base64
-
-#     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-
-#     response = asyncio.run(
-#         get_llm_response_json(
-#             prompt=prompt,
-#             system_prompt="help me extract useful information from this webpage and image",
-#             images_b64=[image_b64],
-#         )
-#     )
-
-#     print(response)
