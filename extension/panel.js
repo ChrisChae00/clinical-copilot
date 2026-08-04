@@ -275,7 +275,7 @@ async function sendAudioForTranscription(blob) {
     }
 
     appendTranscript(segments);
-    analyzeTranscript(segments);
+    summarizeTranscript(segments);
     syncTranscriptToContext(segments);
   } catch (err) {
     appendMessage(`Transcription error: ${err.message}`, 'error');
@@ -326,21 +326,25 @@ async function syncTranscriptToContext(segments) {
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
-async function analyzeTranscript(segments) {
-  const analyzingDiv = appendMessage('Analyzing conversation for clinical actions…', 'assistant');
-  analyzingDiv.classList.add('analyzing');
+// Replaces its own placeholder message in place, so the summary lands where the
+// "Summarizing…" line was rather than after whatever else finished first.
+async function summarizeTranscript(segments) {
+  const div = appendMessage('Summarizing conversation…', 'assistant');
 
   try {
     const context = await resolveChatContext();
-    const { summary, actions } = await client.analyzeTranscript({
+    const { summary } = await client.analyzeTranscript({
       segments,
       context: context || undefined,
     });
-    analyzingDiv.remove();
-    appendClinicalActions(summary, actions || []);
+    if (!summary) {
+      div.remove();
+      return;
+    }
+    div.textContent = summary;
   } catch (err) {
-    analyzingDiv.textContent = `Analysis error: ${err.message}`;
-    analyzingDiv.className = 'message error';
+    div.textContent = `Summary error: ${err.message}`;
+    div.className = 'message error';
   }
 }
 
@@ -605,227 +609,6 @@ function appendAutofillMessage(result) {
   responseArea.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
-}
-
-const DISMISS_REASONS = [
-  'Not useful',
-  'Irrelevant to this patient',
-  'Already done',
-  'Duplicate recommendation',
-  'Other',
-];
-
-const DRAFT_BTN_LABELS = {
-  referral: 'Draft Referral',
-  lab_order: 'Draft Lab Order',
-  prescription: 'Draft Prescription',
-  follow_up: 'Draft Follow-Up Note',
-  imaging: 'Draft Imaging Order',
-  note: 'Draft Note',
-  alert: 'Draft Alert',
-};
-
-function appendClinicalActions(summary, actions) {
-  const ACTION_TYPE_LABELS = {
-    referral: 'Referral',
-    lab_order: 'Lab Order',
-    prescription: 'Prescription',
-    follow_up: 'Follow-Up',
-    imaging: 'Imaging',
-    note: 'Note',
-    alert: 'Alert',
-  };
-  const PRIORITY_LABELS = { high: 'Urgent', medium: 'Important', low: 'Routine' };
-
-  const container = document.createElement('div');
-  container.className = 'message clinical-actions';
-
-  const header = document.createElement('div');
-  header.className = 'actions-header';
-  header.textContent = 'Suggested Clinical Actions';
-  container.appendChild(header);
-
-  if (summary) {
-    const summaryEl = document.createElement('p');
-    summaryEl.className = 'actions-summary';
-    summaryEl.textContent = summary;
-    container.appendChild(summaryEl);
-  }
-
-  if (actions.length === 0) {
-    const none = document.createElement('p');
-    none.className = 'actions-empty';
-    none.textContent = 'No specific actions identified.';
-    container.appendChild(none);
-  } else {
-    actions.forEach((action, actionIdx) => {
-      const card = document.createElement('div');
-      card.className = `action-card priority-${action.priority || 'low'}`;
-
-      const cardHeader = document.createElement('div');
-      cardHeader.className = 'action-card-header';
-
-      const badge = document.createElement('span');
-      badge.className = `action-badge priority-${action.priority || 'low'}`;
-      badge.textContent = PRIORITY_LABELS[action.priority] || action.priority;
-
-      const type = document.createElement('span');
-      type.className = 'action-type';
-      type.textContent = ACTION_TYPE_LABELS[action.type] || action.type;
-
-      cardHeader.appendChild(badge);
-      cardHeader.appendChild(type);
-      card.appendChild(cardHeader);
-
-      const title = document.createElement('div');
-      title.className = 'action-title';
-      title.textContent = action.title;
-      card.appendChild(title);
-
-      if (action.description) {
-        const desc = document.createElement('div');
-        desc.className = 'action-description';
-        desc.textContent = action.description;
-        card.appendChild(desc);
-      }
-
-      if (action.details && Object.keys(action.details).length > 0) {
-        const detailsList = document.createElement('div');
-        detailsList.className = 'action-details';
-        Object.entries(action.details).forEach(([k, v]) => {
-          const item = document.createElement('span');
-          item.className = 'action-detail-item';
-          const val = Array.isArray(v) ? v.join(', ') : v;
-          item.textContent = `${k}: ${val}`;
-          detailsList.appendChild(item);
-        });
-        card.appendChild(detailsList);
-      }
-
-      // Draft area (hidden until generated)
-      const draftArea = document.createElement('div');
-      draftArea.className = 'action-draft hidden';
-
-      const draftText = document.createElement('textarea');
-      draftText.className = 'action-draft-text';
-      draftText.readOnly = true;
-      draftText.rows = 6;
-      draftArea.appendChild(draftText);
-
-      const copyBtn = document.createElement('button');
-      copyBtn.className = 'action-copy-btn';
-      copyBtn.textContent = 'Copy';
-      copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(draftText.value).then(() => {
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
-        });
-      });
-      draftArea.appendChild(copyBtn);
-      card.appendChild(draftArea);
-
-      // Dismiss reason area (hidden until dismiss clicked)
-      const dismissArea = document.createElement('div');
-      dismissArea.className = 'action-dismiss-area hidden';
-
-      const dismissLabel = document.createElement('span');
-      dismissLabel.className = 'action-dismiss-label';
-      dismissLabel.textContent = 'Why are you dismissing this?';
-      dismissArea.appendChild(dismissLabel);
-
-      const dismissSelect = document.createElement('select');
-      dismissSelect.className = 'action-dismiss-select';
-      const defaultOpt = document.createElement('option');
-      defaultOpt.value = '';
-      defaultOpt.textContent = 'Select a reason…';
-      dismissSelect.appendChild(defaultOpt);
-      DISMISS_REASONS.forEach((reason) => {
-        const opt = document.createElement('option');
-        opt.value = reason;
-        opt.textContent = reason;
-        dismissSelect.appendChild(opt);
-      });
-      dismissArea.appendChild(dismissSelect);
-
-      const dismissBtns = document.createElement('div');
-      dismissBtns.className = 'action-dismiss-btns';
-
-      const confirmDismissBtn = document.createElement('button');
-      confirmDismissBtn.className = 'action-confirm-dismiss-btn';
-      confirmDismissBtn.textContent = 'Confirm';
-      confirmDismissBtn.addEventListener('click', () => {
-        if (!dismissSelect.value) return;
-        const reason = dismissSelect.value;
-        card.classList.add('dismissed');
-        buttonsRow.remove();
-        dismissArea.remove();
-        dismissReasonEl.textContent = `Dismissed: ${reason}`;
-        dismissReasonEl.classList.remove('hidden');
-      });
-      dismissBtns.appendChild(confirmDismissBtn);
-
-      const cancelDismissBtn = document.createElement('button');
-      cancelDismissBtn.className = 'action-cancel-dismiss-btn';
-      cancelDismissBtn.textContent = 'Cancel';
-      cancelDismissBtn.addEventListener('click', () => {
-        dismissArea.classList.add('hidden');
-        buttonsRow.classList.remove('hidden');
-      });
-      dismissBtns.appendChild(cancelDismissBtn);
-      dismissArea.appendChild(dismissBtns);
-      card.appendChild(dismissArea);
-
-      const dismissReasonEl = document.createElement('div');
-      dismissReasonEl.className = 'action-dismiss-reason hidden';
-      card.appendChild(dismissReasonEl);
-
-      // Action buttons row
-      const buttonsRow = document.createElement('div');
-      buttonsRow.className = 'action-buttons';
-
-      const draftBtn = document.createElement('button');
-      draftBtn.className = 'action-draft-btn';
-      draftBtn.textContent = DRAFT_BTN_LABELS[action.type] || 'Draft';
-      draftBtn.addEventListener('click', async () => {
-        draftBtn.disabled = true;
-        draftBtn.textContent = 'Generating…';
-        draftArea.classList.add('hidden');
-        try {
-          const currentContext = await resolveChatContext();
-          const { draft } = await client.draftAction({
-            action,
-            context: currentContext || undefined,
-          });
-          draftText.value = draft;
-          draftArea.classList.remove('hidden');
-          draftBtn.textContent = 'Regenerate';
-        } catch (err) {
-          draftText.value = `Error generating draft: ${err.message}`;
-          draftArea.classList.remove('hidden');
-          draftBtn.textContent = DRAFT_BTN_LABELS[action.type] || 'Draft';
-        } finally {
-          draftBtn.disabled = false;
-        }
-      });
-
-      const dismissBtn = document.createElement('button');
-      dismissBtn.className = 'action-dismiss-btn';
-      dismissBtn.textContent = 'Dismiss';
-      dismissBtn.addEventListener('click', () => {
-        buttonsRow.classList.add('hidden');
-        dismissArea.classList.remove('hidden');
-      });
-
-      buttonsRow.appendChild(draftBtn);
-      buttonsRow.appendChild(dismissBtn);
-      card.appendChild(buttonsRow);
-
-      container.appendChild(card);
-    });
-  }
-
-  responseArea.appendChild(container);
-  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
 function setLoading(loading) {

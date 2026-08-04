@@ -321,18 +321,6 @@ body {
   .highlight-pulse { animation-duration: 0.01s; }
 }
 
-/* ── Clinical action cards ─────────────────────────────── */
-.message.clinical-actions {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  align-self: flex-start;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
 .actions-header {
   font-size: 12px;
   font-weight: 700;
@@ -342,144 +330,12 @@ body {
   margin-bottom: 2px;
 }
 
-.actions-summary {
-  font-size: 13px;
-  color: #374151;
-  line-height: 1.4;
-  border-bottom: 1px solid #f3f4f6;
-  padding-bottom: 8px;
-}
-
-.actions-empty {
-  font-size: 13px;
-  color: #9ca3af;
-  font-style: italic;
-}
-
-.action-card {
-  border-radius: 6px;
-  padding: 8px 10px;
-  border-left: 3px solid #d1d5db;
-  background: #f9fafb;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.action-card.priority-high {
-  border-left-color: #dc2626;
-  background: #fff5f5;
-}
-
-.action-card.priority-medium {
-  border-left-color: #d97706;
-  background: #fffbf0;
-}
-
-.action-card.priority-low {
-  border-left-color: #16a34a;
-  background: #f0fdf4;
-}
-
-.action-card-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.action-badge {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 1px 6px;
-  border-radius: 9999px;
-  letter-spacing: 0.4px;
-}
-
-.action-badge.priority-high {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.action-badge.priority-medium {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.action-badge.priority-low {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.action-type {
-  font-size: 11px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.action-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.action-description {
-  font-size: 12px;
-  color: #4b5563;
-  line-height: 1.4;
-}
-
-.action-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.action-detail-item {
-  font-size: 11px;
-  background: rgba(0, 0, 0, 0.05);
-  color: #374151;
-  padding: 1px 7px;
-  border-radius: 9999px;
-}
-
 /* Action buttons row */
 .action-buttons {
   display: flex;
   gap: 6px;
   margin-top: 6px;
 }
-
-.action-draft-btn,
-.action-dismiss-btn {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 4px;
-  border: 1px solid;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.action-draft-btn {
-  background: #0066cc;
-  color: #fff;
-  border-color: #0066cc;
-}
-
-.action-draft-btn:hover:not(:disabled) { opacity: 0.85; }
-.action-draft-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.action-dismiss-btn {
-  background: #fff;
-  color: #6b7280;
-  border-color: #d1d5db;
-}
-
-.action-dismiss-btn:hover { background: #f3f4f6; }
 
 /* Draft output area */
 .action-draft {
@@ -516,83 +372,6 @@ body {
 }
 
 .action-copy-btn:hover { background: #f3f4f6; }
-
-/* Dismiss reason area */
-.action-dismiss-area {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 8px;
-  background: #fafafa;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-}
-
-.action-dismiss-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #6b7280;
-}
-
-.action-dismiss-select {
-  font-size: 12px;
-  padding: 4px 6px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  color: #374151;
-  background: #fff;
-}
-
-.action-dismiss-btns {
-  display: flex;
-  gap: 6px;
-}
-
-.action-confirm-dismiss-btn,
-.action-cancel-dismiss-btn {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: 1px solid;
-}
-
-.action-confirm-dismiss-btn {
-  background: #dc2626;
-  color: #fff;
-  border-color: #dc2626;
-}
-
-.action-confirm-dismiss-btn:hover { opacity: 0.85; }
-
-.action-cancel-dismiss-btn {
-  background: #fff;
-  color: #6b7280;
-  border-color: #d1d5db;
-}
-
-.action-dismiss-reason {
-  font-size: 11px;
-  color: #9ca3af;
-  font-style: italic;
-  margin-top: 6px;
-}
-
-.action-dismiss-reason.hidden { display: none; }
-
-.action-cancel-dismiss-btn:hover { background: #f3f4f6; }
-
-/* Dismissed card state */
-.action-card.dismissed {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-.action-card.dismissed .action-title {
-  text-decoration: line-through;
-}
 
 #send-btn {
   flex: 0 0 auto;
