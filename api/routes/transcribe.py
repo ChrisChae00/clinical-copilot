@@ -4,6 +4,8 @@ import httpx
 from auth import require_api_key
 from config import (
     WHISPERX_API_KEY,
+    WHISPERX_CF_ACCESS_CLIENT_ID,
+    WHISPERX_CF_ACCESS_CLIENT_SECRET,
     WHISPERX_TIMEOUT,
     WHISPERX_URL,
 )
@@ -86,6 +88,8 @@ async def transcribe(
     }
 
     headers = {
+        "CF-Access-Client-Id": WHISPERX_CF_ACCESS_CLIENT_ID,
+        "CF-Access-Client-Secret": WHISPERX_CF_ACCESS_CLIENT_SECRET,
         "x-api-key": WHISPERX_API_KEY,
     }
 
