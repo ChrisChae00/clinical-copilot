@@ -5,42 +5,22 @@ import secrets
 import tempfile
 
 import whisperx
+from config import (
+    HF_TOKEN,
+    WHISPERX_API_KEY,
+    WHISPERX_BATCH_SIZE,
+    WHISPERX_DIARIZE,
+    WHISPERX_HOST,
+    WHISPERX_LANGUAGE,
+    WHISPERX_MODEL,
+    WHISPERX_PORT,
+)
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.security import APIKeyHeader
 
 logger = logging.getLogger(__name__)
 
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
-
-MODEL_NAME = os.getenv("WHISPERX_MODEL", "base").strip() or "base"
-LANGUAGE = os.getenv("WHISPERX_LANGUAGE", "en").strip() or "en"
-BATCH_SIZE = int(os.getenv("WHISPERX_BATCH_SIZE", "4"))
-
-SERVICE_API_KEY = os.getenv("WHISPERX_API_KEY", "").strip()
-HF_TOKEN = os.getenv("HF_TOKEN", "").strip() or None
-
-if not SERVICE_API_KEY:
-    raise RuntimeError("WHISPERX_API_KEY must be configured")
-
-
-def _read_bool(name: str, default: bool) -> bool:
-    raw = os.getenv(name)
-
-    if raw is None:
-        return default
-
-    value = raw.strip().lower()
-
-    if value in {"1", "true", "yes"}:
-        return True
-
-    if value in {"0", "false", "no"}:
-        return False
-
-    raise RuntimeError(f"{name} must be true or false")
-
-
-DIARIZE = _read_bool("WHISPERX_DIARIZE", True)
 
 app = FastAPI(title="Ally WhisperX Service")
 
@@ -62,7 +42,7 @@ async def require_service_api_key(
 ) -> None:
     if api_key is None or not secrets.compare_digest(
         api_key,
-        SERVICE_API_KEY,
+        WHISPERX_API_KEY,
     ):
         raise HTTPException(
             status_code=401,
@@ -89,7 +69,7 @@ def _get_whisperx_model():
         compute_type = "float16" if device == "cuda" else "int8"
 
         _whisperx_model = whisperx.load_model(
-            MODEL_NAME,
+            WHISPERX_MODEL,
             device,
             compute_type=compute_type,
         )
@@ -100,7 +80,7 @@ def _get_whisperx_model():
 def _get_diarize_model():
     global _diarize_model
 
-    if not DIARIZE or not HF_TOKEN:
+    if not WHISPERX_DIARIZE or not HF_TOKEN:
         return None
 
     if _diarize_model is None:
@@ -114,10 +94,7 @@ def _get_diarize_model():
     return _diarize_model
 
 
-def _audio_suffix(
-    filename: str,
-    content_type: str,
-) -> str:
+def _audio_suffix(filename: str, content_type: str) -> str:
     media_type = content_type.split(";", 1)[0].strip().lower()
     lower_name = filename.lower()
 
@@ -150,11 +127,11 @@ def _run_transcription(audio_path: str) -> dict:
 
     result = _get_whisperx_model().transcribe(
         audio_data,
-        batch_size=BATCH_SIZE,
-        language=LANGUAGE,
+        batch_size=WHISPERX_BATCH_SIZE,
+        language=WHISPERX_LANGUAGE,
     )
 
-    language = str(result.get("language") or LANGUAGE)
+    language = str(result.get("language") or WHISPERX_LANGUAGE)
     transcript_segments = result.get("segments", [])
 
     if not transcript_segments:
@@ -291,3 +268,13 @@ async def transcribe(
                 os.unlink(temporary_path)
             except FileNotFoundError:
                 pass
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        app,
+        host=WHISPERX_HOST,
+        port=WHISPERX_PORT,
+    )
