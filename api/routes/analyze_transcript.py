@@ -1,8 +1,7 @@
 """
 POST /analyze-transcript
 
-Analyzes a doctor-patient conversation transcript and returns structured
-clinical action items (referrals, lab orders, prescriptions, follow-ups, etc.).
+Summarizes a doctor-patient conversation transcript.
 
 Request body:
 {
@@ -12,16 +11,7 @@ Request body:
 
 Response:
 {
-  "summary": "Visit summary",
-  "actions": [
-    {
-      "type": "referral|lab_order|prescription|follow_up|imaging|note|alert",
-      "priority": "high|medium|low",
-      "title": "Short title",
-      "description": "What to do and why",
-      "details": {}
-    }
-  ]
+  "summary": "Visit summary"
 }
 """
 
@@ -29,7 +19,7 @@ import json
 
 from auth import require_api_key
 from fastapi import APIRouter, Depends, HTTPException, Request
-from llm.client import get_llm_response_json
+from llm.client import get_llm_response_str
 from llm.prompts import SYSTEM_PROMPT_ANALYZE_TRANSCRIPT
 
 router = APIRouter()
@@ -58,7 +48,7 @@ async def analyze_transcript(request: Request):
     prompt = _build_prompt(segments, context)
 
     try:
-        result = await get_llm_response_json(
+        summary = await get_llm_response_str(
             prompt=prompt,
             system_prompt=SYSTEM_PROMPT_ANALYZE_TRANSCRIPT,
         )
@@ -67,7 +57,7 @@ async def analyze_transcript(request: Request):
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
-    return result
+    return {"summary": summary.strip()}
 
 
 def _build_prompt(segments: list, context: object) -> str:
@@ -76,7 +66,7 @@ def _build_prompt(segments: list, context: object) -> str:
     )
 
     parts = [
-        "Analyze this doctor-patient conversation and return the JSON action plan.\n\n",
+        "Summarize this doctor-patient conversation.\n\n",
         "### TRANSCRIPT ###\n",
         transcript_lines,
     ]
