@@ -1,132 +1,165 @@
 import logging
-import os
-import tempfile
 
+import httpx
 from auth import require_api_key
+from config import (
+    WHISPERX_API_KEY,
+    WHISPERX_TIMEOUT,
+    WHISPERX_URL,
+)
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-MAX_AUDIO_BYTES = 25 * 1024 * 1024  # 25 MB
-
-_whisperx_model = None
-_align_models: dict = {}  # lang -> (model, metadata)
-_diarize_model = None
-_device: str | None = None
+MAX_AUDIO_BYTES = 25 * 1024 * 1024
 
 
-def _cuda_available() -> bool:
-    try:
-        import torch
+def _audio_suffix(filename: str, content_type: str) -> str:
+    media_type = content_type.split(";", 1)[0].strip().lower()
+    lower_name = filename.lower()
 
-        return torch.cuda.is_available()
-    except ImportError:
-        return False
+    if media_type in {"audio/webm", "video/webm"}:
+        return ".webm"
 
+    if media_type in {
+        "audio/wav",
+        "audio/x-wav",
+        "audio/wave",
+        "audio/vnd.wave",
+    }:
+        return ".wav"
 
-def _get_device() -> str:
-    global _device
-    if _device is None:
-        _device = "cuda" if _cuda_available() else "cpu"
-    return _device
+    if lower_name.endswith(".webm"):
+        return ".webm"
 
+    if lower_name.endswith(".wav"):
+        return ".wav"
 
-def _get_whisperx_model():
-    global _whisperx_model
-    if _whisperx_model is None:
-        import whisperx
-
-        device = _get_device()
-        compute_type = "float16" if device == "cuda" else "int8"
-        _whisperx_model = whisperx.load_model("base", device, compute_type=compute_type)
-    return _whisperx_model
-
-
-def _get_diarize_model():
-    global _diarize_model
-    hf_token = os.getenv("HF_TOKEN")
-    if not hf_token:
-        return None
-    if _diarize_model is None:
-        from whisperx.diarize import DiarizationPipeline
-
-        _diarize_model = DiarizationPipeline(token=hf_token, device=_get_device())
-    return _diarize_model
+    raise HTTPException(
+        status_code=415,
+        detail="Only WebM and WAV audio are supported",
+    )
 
 
-@router.post("/transcribe", dependencies=[Depends(require_api_key)])
-async def transcribe(audio: UploadFile = File(...)):
-    """Accepts a WebM or WAV audio upload (max 25 MB) and returns diarized transcript segments."""
-    content_type = audio.content_type or ""
-    suffix = ".webm" if "webm" in content_type else ".wav"
-
-    tmp_path = None
-    data = await audio.read(MAX_AUDIO_BYTES + 1)
-    if len(data) > MAX_AUDIO_BYTES:
-        raise HTTPException(status_code=413, detail="Audio file exceeds 25 MB limit")
-
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(data)
-        tmp_path = tmp.name
-
-    try:
-        import whisperx
-
-        model = _get_whisperx_model()
-        device = _get_device()
-
-        result = model.transcribe(tmp_path, batch_size=4, language="en")
-        lang = "en"
-
-        if lang not in _align_models:
-            align_model, metadata = whisperx.load_align_model(
-                language_code=lang, device=device
-            )
-            _align_models[lang] = (align_model, metadata)
-
-        align_model, metadata = _align_models[lang]
-        result = whisperx.align(
-            result["segments"],
-            align_model,
-            metadata,
-            tmp_path,
-            device,
-            return_char_alignments=False,
+@router.post(
+    "/transcribe",
+    dependencies=[Depends(require_api_key)],
+)
+async def transcribe(
+    audio: UploadFile = File(...),
+) -> dict:
+    if not WHISPERX_URL or not WHISPERX_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Transcription service is not configured",
         )
 
-        # Diarization is optional: a missing/invalid HF_TOKEN, an unaccepted
-        # gated-repo license, or a whisperX version change must not fail the
-        # whole transcription. Segments fall back to SPEAKER_00 below.
-        try:
-            diarize_model = _get_diarize_model()
-            if diarize_model is not None:
-                from whisperx.diarize import assign_word_speakers
+    filename = audio.filename or "audio"
+    content_type = audio.content_type or "application/octet-stream"
+    suffix = _audio_suffix(filename, content_type)
 
-                diarize_segments = diarize_model(tmp_path, num_speakers=2)
-                result = assign_word_speakers(diarize_segments, result)
-        except Exception:
-            logger.warning(
-                "Diarization unavailable, returning unlabeled segments", exc_info=True
+    if filename == "audio":
+        filename = f"audio{suffix}"
+
+    try:
+        data = await audio.read(MAX_AUDIO_BYTES + 1)
+    finally:
+        await audio.close()
+
+    if not data:
+        raise HTTPException(status_code=400, detail="Audio file is empty")
+
+    if len(data) > MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Audio file exceeds 25 MB limit",
+        )
+
+    files = {
+        "audio": (
+            filename,
+            data,
+            content_type,
+        )
+    }
+
+    headers = {
+        "x-api-key": WHISPERX_API_KEY,
+    }
+
+    timeout = httpx.Timeout(
+        connect=10.0,
+        read=WHISPERX_TIMEOUT,
+        write=WHISPERX_TIMEOUT,
+        pool=10.0,
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(
+                f"{WHISPERX_URL.rstrip('/')}/transcribe",
+                files=files,
+                headers=headers,
             )
 
-        segments = [
-            {
-                "speaker": seg.get("speaker", "SPEAKER_00"),
-                "text": seg["text"].strip(),
-                "start": round(seg.get("start", 0.0), 2),
-                "end": round(seg.get("end", 0.0), 2),
-            }
-            for seg in result["segments"]
-            if seg.get("text", "").strip()
-        ]
+    except httpx.TimeoutException as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="Transcription service timed out",
+        ) from exc
 
-        return {"segments": segments, "language": lang}
+    except httpx.RequestError as exc:
+        logger.warning(
+            "Could not reach transcription service: %s",
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="Transcription service unavailable",
+        ) from exc
 
-    except Exception as exc:
-        logger.exception("Transcription failed")
-        raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}")
+    if response.status_code in {400, 413, 415}:
+        try:
+            detail = response.json().get("detail")
+        except (ValueError, AttributeError):
+            detail = None
 
-    finally:
-        if tmp_path:
-            os.unlink(tmp_path)
+        if not isinstance(detail, str):
+            detail = "Invalid audio upload"
+
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=detail,
+        )
+
+    if response.status_code != 200:
+        logger.error(
+            "Transcription service returned status %s",
+            response.status_code,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="Transcription service failed",
+        )
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Transcription service returned invalid JSON",
+        ) from exc
+
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("segments"), list)
+        or not isinstance(payload.get("language"), str)
+    ):
+        raise HTTPException(
+            status_code=502,
+            detail="Transcription service returned an invalid response",
+        )
+
+    return payload

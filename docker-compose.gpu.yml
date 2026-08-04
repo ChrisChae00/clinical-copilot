@@ -8,8 +8,7 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-
-  api-server:
+  whisperx:
     deploy:
       resources:
         reservations:
