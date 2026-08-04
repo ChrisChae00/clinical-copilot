@@ -11,7 +11,6 @@ const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
-const generateReferralBtn = document.getElementById('generate-referral-btn');
 const contextView = document.getElementById('context-view');
 const contextStatus = document.getElementById('context-status');
 const includeHtmlToggle = document.getElementById('include-html-toggle');
@@ -86,6 +85,12 @@ let referralDraftText = null;
 let referralDraftCard = null;
 let referralPulseTimer = null;
 
+const REFERRAL_DRAFT_ACTION = {
+  type: 'referral',
+  title: 'Referral letter',
+  description: '',
+};
+
 // Scrolls the whole draft card into view and flashes it so the user can see
 // that a draft was just created or replaced.
 function focusReferralCard(card) {
@@ -100,33 +105,26 @@ function focusReferralCard(card) {
   }, 1500);
 }
 
-async function runGenerateReferral() {
-  generateReferralBtn.disabled = true;
-  const wasRegenerate = generateReferralBtn.dataset.mode === 'regenerate';
-  generateReferralBtn.textContent = wasRegenerate ? 'Regenerating…' : 'Generating…';
+async function runReferralAction(description = '') {
+  const context = await resolveChatContext();
+  const { draft } = await client.draftAction({
+    action: {
+      ...REFERRAL_DRAFT_ACTION,
+      description,
+    },
+    context: context || undefined,
+  });
 
-  try {
-    const context = await resolveChatContext();
-    const { draft } = await client.draftAction({
-      action: { type: 'referral', title: 'Referral letter', description: '' },
-      context: context || undefined,
-    });
-    if (referralDraftText) {
-      referralDraftText.value = draft;
-    } else {
-      const created = appendReferralDraft(draft);
-      referralDraftText = created.textarea;
-      referralDraftCard = created.card;
-    }
-    focusReferralCard(referralDraftCard);
-    generateReferralBtn.dataset.mode = 'regenerate';
-    generateReferralBtn.textContent = 'Regenerate Referral';
-  } catch (err) {
-    appendMessage(`Error generating referral: ${err.message}`, 'error');
-    generateReferralBtn.textContent = wasRegenerate ? 'Regenerate Referral' : 'Generate Referral';
-  } finally {
-    generateReferralBtn.disabled = false;
+  if (referralDraftText) {
+    referralDraftText.value = draft;
+  } else {
+    const created = appendReferralDraft(draft);
+    referralDraftText = created.textarea;
+    referralDraftCard = created.card;
   }
+
+  focusReferralCard(referralDraftCard);
+  return draft;
 }
 
 // Builds the referral draft card and returns { card, textarea } so subsequent
@@ -168,8 +166,6 @@ function appendReferralDraft(draft) {
   responseArea.appendChild(container);
   return { card: container, textarea: draftText };
 }
-
-generateReferralBtn.addEventListener('click', runGenerateReferral);
 
 // ── Voice recording ───────────────────────────────────────────
 
@@ -436,10 +432,15 @@ form.addEventListener('submit', async (e) => {
 
 const ACTION_LABELS = {
   autofill: 'Autofill form',
+  referral: 'Generate referral',
 };
 
 function renderActionSuggestions(actions) {
-  const supportedActions = (actions || []).filter((action) => action === 'autofill');
+  const supportedActions = [...new Set(
+    (actions || [])
+      .map(normalizeActionName)
+      .filter((action) => action && ACTION_LABELS[action])
+  )];
   if (!supportedActions.length) return;
 
   const container = document.createElement('div');
@@ -453,11 +454,23 @@ function renderActionSuggestions(actions) {
   supportedActions.forEach((action) => {
     if (action === 'autofill') {
       container.appendChild(createAutofillActionCard());
+    } else if (action === 'referral') {
+      container.appendChild(createReferralActionCard());
     }
   });
 
   responseArea.appendChild(container);
   container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function normalizeActionName(action) {
+  const rawName = typeof action === 'string' ? action : action?.type;
+  const normalized = String(rawName || '').trim().toLowerCase();
+  const aliases = {
+    generate_referral: 'referral',
+    referral_letter: 'referral',
+  };
+  return aliases[normalized] || normalized;
 }
 
 // basePrompt: explicit instructions to seed the autofill run with (eg. a transcript).
@@ -499,6 +512,55 @@ function createAutofillActionCard(basePrompt = null, description = null) {
       appendMessage(`Autofill error: ${err.message}`, 'error');
       runBtn.disabled = false;
       runBtn.textContent = 'Run autofill';
+    }
+  });
+  card.appendChild(runBtn);
+
+  return card;
+}
+
+function createReferralActionCard() {
+  const card = document.createElement('div');
+  card.className = 'autofill-action-card referral-action-card';
+
+  const title = document.createElement('div');
+  title.className = 'autofill-action-title';
+  title.textContent = ACTION_LABELS.referral;
+  card.appendChild(title);
+
+  const descriptionEl = document.createElement('div');
+  descriptionEl.className = 'autofill-action-description';
+  descriptionEl.textContent = 'Run this to draft a referral letter from the current patient context.';
+  card.appendChild(descriptionEl);
+
+  const extraPrompt = document.createElement('textarea');
+  extraPrompt.className = 'autofill-extra-prompt';
+  extraPrompt.rows = 3;
+  extraPrompt.placeholder = 'Optional: add specialist, reason, urgency, or letter details.';
+  card.appendChild(extraPrompt);
+
+  const runBtn = document.createElement('button');
+  runBtn.className = 'autofill-run-btn referral-run-btn';
+  runBtn.type = 'button';
+  runBtn.textContent = referralDraftText ? 'Regenerate referral' : 'Generate referral';
+  runBtn.addEventListener('click', async () => {
+    runBtn.disabled = true;
+    runBtn.textContent = referralDraftText ? 'Regenerating referral...' : 'Generating referral...';
+
+    const description = [
+      lastUserPrompt,
+      extraPrompt.value.trim()
+        ? `Additional referral instructions: ${extraPrompt.value.trim()}`
+        : '',
+    ].filter(Boolean).join('\n\n');
+
+    try {
+      await runReferralAction(description);
+      runBtn.textContent = 'Referral drafted';
+    } catch (err) {
+      appendMessage(`Referral error: ${err.message}`, 'error');
+      runBtn.disabled = false;
+      runBtn.textContent = referralDraftText ? 'Regenerate referral' : 'Generate referral';
     }
   });
   card.appendChild(runBtn);

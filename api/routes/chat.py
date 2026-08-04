@@ -5,6 +5,7 @@ which takes a prompt and returns a json response from the LLM.
 """
 
 import json
+import re
 
 from auth import require_api_key
 from dom.dom_processor import clean_dom
@@ -14,6 +15,21 @@ from llm.prompts import CHAT_SYSTEM_PROMPT, SYSTEM_PROMPT_PROCESS_CLEANED_DOM
 from pydantic import BaseModel
 
 router = APIRouter()
+
+SUPPORTED_CHAT_ACTIONS = {"autofill", "referral"}
+ACTION_ALIASES = {
+    "generate_referral": "referral",
+    "referral_letter": "referral",
+}
+REFERRAL_INTENT_RE = re.compile(
+    r"\b(?:generate|draft|write|create|prepare|make)\b[\s\S]{0,80}\breferral\b"
+    r"|\breferral\s+(?:letter|document|note)\b",
+    re.IGNORECASE,
+)
+NEGATED_REFERRAL_INTENT_RE = re.compile(
+    r"\b(?:do not|don't|dont|no need to)\b[\s\S]{0,80}\breferral\b",
+    re.IGNORECASE,
+)
 
 
 class ChatRequest(BaseModel):
@@ -113,8 +129,10 @@ async def _get_chat_response(
     if not prompt or not prompt.strip():
         raise HTTPException(status_code=400, detail="prompt must be a non-empty string")
 
+    user_prompt = prompt
+
     # build prompt
-    prompt = "### USER PROMPT ###\n" + prompt
+    prompt = "### USER PROMPT ###\n" + user_prompt
 
     # add context to prompt
     if context and context.strip():
@@ -145,4 +163,49 @@ async def _get_chat_response(
     if updated_context is not None and not isinstance(updated_context, str):
         response["updated_context"] = json.dumps(updated_context, ensure_ascii=False)
 
+    response["actions"] = _resolve_supported_actions(
+        response.get("actions"),
+        user_prompt,
+    )
+
     return response
+
+
+def _resolve_supported_actions(actions: object, prompt: str) -> list[str]:
+    resolved: list[str] = []
+    action_items = actions if isinstance(actions, list) else [actions]
+
+    for action in action_items:
+        normalized = _normalize_action_name(action)
+        if normalized in SUPPORTED_CHAT_ACTIONS and normalized not in resolved:
+            resolved.append(normalized)
+
+    for inferred_action in _infer_prompt_actions(prompt):
+        if inferred_action not in resolved:
+            resolved.append(inferred_action)
+
+    return resolved
+
+
+def _normalize_action_name(action: object) -> str | None:
+    raw_action: object
+
+    if isinstance(action, str):
+        raw_action = action
+    elif isinstance(action, dict):
+        raw_action = action.get("type") or action.get("name")
+    else:
+        return None
+
+    normalized = str(raw_action or "").strip().lower()
+    return ACTION_ALIASES.get(normalized, normalized) or None
+
+
+def _infer_prompt_actions(prompt: str) -> list[str]:
+    if not prompt or NEGATED_REFERRAL_INTENT_RE.search(prompt):
+        return []
+
+    if REFERRAL_INTENT_RE.search(prompt):
+        return ["referral"]
+
+    return []

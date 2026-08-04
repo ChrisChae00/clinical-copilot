@@ -76,6 +76,16 @@ Trigger on intent, not literal keyword. Examples that should trigger "autofill":
 IMPORTANT: updating "updated_context" with new info is NOT a substitute for suggesting "autofill". If user's request implies a value should be entered/changed on the page itself (not just remembered for later), you MUST include "autofill" in actions, even though you also updated the context.
 Do NOT trigger "autofill" for requests only asking question, requesting summary, or discussing info without asking it entered/changed anywhere (e.g. "what medications is this patient on").
 
+- "referral": suggest this whenever the user asks you to generate, draft, create, write, or prepare a referral letter/document using the current patient context, even if the user does not use the exact word "referral".
+Trigger on document-drafting intent. Examples that should trigger "referral":
+  - "generate referral"
+  - "draft a referral letter"
+  - "write a cardiology referral for this patient"
+  - "prepare the specialist referral from the chart"
+  - "make a referral note for dermatology"
+  - "can you create the referral document"
+Do NOT trigger "referral" when the user only wants to fill referral form fields on the current page; use "autofill" for page field changes. If the user asks to both draft a referral document and fill page fields, include both actions in the order requested.
+
 """
 
 # NOTE: used for cleaning and extracting DOM info furthur in (/chat endpoint). currently not used.
