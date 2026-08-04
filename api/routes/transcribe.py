@@ -55,7 +55,7 @@ def _get_diarize_model():
     return _diarize_model
 
 
-@router.post("/transcribe")
+@router.post("/transcribe", dependencies=[Depends(require_api_key)])
 async def transcribe(audio: UploadFile = File(...)):
     """Accepts a WebM or WAV audio upload (max 25 MB) and returns diarized transcript segments."""
     content_type = audio.content_type or ""
@@ -95,19 +95,27 @@ async def transcribe(audio: UploadFile = File(...)):
             return_char_alignments=False,
         )
 
-        diarize_model = _get_diarize_model()
-        if diarize_model is not None:
-            from whisperx.diarize import assign_word_speakers
+        # Diarization is optional: a missing/invalid HF_TOKEN, an unaccepted
+        # gated-repo license, or a whisperX version change must not fail the
+        # whole transcription. Segments fall back to SPEAKER_00 below.
+        try:
+            diarize_model = _get_diarize_model()
+            if diarize_model is not None:
+                from whisperx.diarize import assign_word_speakers
 
-            diarize_segments = diarize_model(tmp_path, num_speakers=2)
-            result = assign_word_speakers(diarize_segments, result)
+                diarize_segments = diarize_model(tmp_path, num_speakers=2)
+                result = assign_word_speakers(diarize_segments, result)
+        except Exception:
+            logger.warning(
+                "Diarization unavailable, returning unlabeled segments", exc_info=True
+            )
 
         segments = [
             {
                 "speaker": seg.get("speaker", "SPEAKER_00"),
                 "text": seg["text"].strip(),
-                "start": round(seg["start"], 2),
-                "end": round(seg["end"], 2),
+                "start": round(seg.get("start", 0.0), 2),
+                "end": round(seg.get("end", 0.0), 2),
             }
             for seg in result["segments"]
             if seg.get("text", "").strip()
@@ -115,9 +123,9 @@ async def transcribe(audio: UploadFile = File(...)):
 
         return {"segments": segments, "language": lang}
 
-    except Exception:
+    except Exception as exc:
         logger.exception("Transcription failed")
-        raise HTTPException(status_code=500, detail="Transcription failed")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}")
 
     finally:
         if tmp_path:
