@@ -11,6 +11,7 @@ const spinner = document.getElementById('spinner');
 const closeBtn = document.getElementById('close-btn');
 const viewContextBtn = document.getElementById('view-context-btn');
 const clearContextBtn = document.getElementById('clear-context-btn');
+const generateReferralBtn = document.getElementById('generate-referral-btn');
 const contextView = document.getElementById('context-view');
 const contextStatus = document.getElementById('context-status');
 const includeHtmlToggle = document.getElementById('include-html-toggle');
@@ -124,7 +125,24 @@ async function runReferralAction(description = '') {
   }
 
   focusReferralCard(referralDraftCard);
+  generateReferralBtn.dataset.mode = 'regenerate';
+  generateReferralBtn.textContent = 'Regenerate Referral';
   return draft;
+}
+
+async function runGenerateReferral() {
+  const wasRegenerate = generateReferralBtn.dataset.mode === 'regenerate';
+  generateReferralBtn.disabled = true;
+  generateReferralBtn.textContent = wasRegenerate ? 'Regenerating...' : 'Generating...';
+
+  try {
+    await runReferralAction();
+  } catch (err) {
+    appendMessage(`Error generating referral: ${err.message}`, 'error');
+    generateReferralBtn.textContent = wasRegenerate ? 'Regenerate Referral' : 'Generate Referral';
+  } finally {
+    generateReferralBtn.disabled = false;
+  }
 }
 
 // Builds the referral draft card and returns { card, textarea } so subsequent
@@ -166,6 +184,8 @@ function appendReferralDraft(draft) {
   responseArea.appendChild(container);
   return { card: container, textarea: draftText };
 }
+
+generateReferralBtn.addEventListener('click', runGenerateReferral);
 
 // ── Voice recording ───────────────────────────────────────────
 
