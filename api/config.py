@@ -26,7 +26,7 @@ MAX_CONTEXT_LEN = int(os.getenv("MAX_CONTEXT_LEN", "8192"))
 LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "300"))
 
 WHISPERX_URL = _clean_env("WHISPERX_URL")
-WHISPERX_API_KEY = _clean_env("WHISPERX_API_KEY") or "whisperx-api-key-placeholder"
+WHISPERX_API_KEY = _clean_env("WHISPERX_API_KEY")
 WHISPERX_TIMEOUT = int(os.getenv("WHISPERX_TIMEOUT", "900"))
 
 # temp cloudflare access

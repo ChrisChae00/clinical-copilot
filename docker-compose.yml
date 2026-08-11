@@ -1,3 +1,9 @@
+# `docker compose up` alone only starts api-server, pointed at the remote
+# OLLAMA_URL / WHISPERX_URL from your .env (e.g. Cloudflare-Access-fronted
+# servers). To run Ollama and WhisperX in-container instead, opt in with:
+#   docker compose --profile local up
+# and set OLLAMA_URL=http://ollama:11434 / WHISPERX_URL=http://whisperx:8001
+# in .env (this is what .env.example ships by default).
 services:
   ollama:
     image: ollama/ollama:latest

@@ -1,0 +1,14 @@
+services:
+  # WhisperX (load/align/diarize) is the only local service doing GPU-bound
+  # inference now that transcription moved out of api-server. Ollama's own
+  # image handles its own GPU access independently of this override.
+  whisperx:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+# Usage: docker compose --profile local -f docker-compose.yml -f docker-compose.gpu.yml up

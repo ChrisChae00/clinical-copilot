@@ -1,6 +1,7 @@
 """Async client helpers for Ollama's native chat API."""
 
 import json
+import logging
 from typing import Any
 
 import httpx
@@ -13,6 +14,7 @@ from config import (
     OLLAMA_URL,
 )
 
+logger = logging.getLogger(__name__)
 
 _OLLAMA_MESSAGE_ROLES = {"system", "user", "assistant", "tool"}
 
@@ -66,21 +68,26 @@ async def get_llm_chat_response(
         raise RuntimeError(f"Could not reach Ollama: {exc}") from exc
 
     if response.status_code != 200:
-        raise RuntimeError(
-            f"Ollama returned status code {response.status_code}: {response.text}"
+        # Ollama error bodies often echo the submitted prompt, which can carry
+        # clinical context. Log it server-side only; keep the raised error generic.
+        logger.warning(
+            "Ollama returned status code %s: %s", response.status_code, response.text
         )
+        raise RuntimeError(f"Ollama returned status code {response.status_code}")
 
     try:
         data = response.json()
     except ValueError as exc:
-        raise RuntimeError(f"Ollama returned invalid JSON: {response.text}") from exc
+        logger.warning("Ollama returned invalid JSON: %s", response.text)
+        raise RuntimeError("Ollama returned invalid JSON") from exc
 
     if not isinstance(data, dict):
         raise RuntimeError("Ollama response must be a JSON object")
 
     message = data.get("message")
     if not isinstance(message, dict):
-        raise RuntimeError(f"Ollama response does not contain a valid 'message': {data}")
+        logger.warning("Ollama response does not contain a valid 'message': %s", data)
+        raise RuntimeError("Ollama response does not contain a valid 'message'")
     if message.get("role") not in {None, "assistant"}:
         raise RuntimeError("Ollama response message role must be 'assistant'")
 
@@ -155,22 +162,20 @@ async def is_ollama_healthy() -> bool:
         payload = response.json()
         capabilities = payload.get("capabilities") if isinstance(payload, dict) else None
         if not isinstance(capabilities, list) or "tools" not in capabilities:
-            print(
-                "WARNING: configured Ollama model does not advertise native tools "
-                "capability"
+            logger.warning(
+                "Configured Ollama model does not advertise native tools capability"
             )
             return False
         return True
     except ValueError as exc:
-        print(f"WARNING: Ollama health check returned invalid JSON: {exc}")
+        logger.warning("Ollama health check returned invalid JSON: %s", exc)
         return False
     except httpx.RequestError as exc:
-        print(f"WARNING: Ollama health check failed (network): {exc}")
+        logger.warning("Ollama health check failed (network): %s", exc)
         return False
     except httpx.HTTPStatusError as exc:
-        print(
-            "WARNING: Ollama health check failed "
-            f"(status {exc.response.status_code}): {exc}"
+        logger.warning(
+            "Ollama health check failed (status %s): %s", exc.response.status_code, exc
         )
         return False
 

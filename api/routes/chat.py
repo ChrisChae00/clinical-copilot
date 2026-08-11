@@ -377,9 +377,10 @@ def _normalize_tool_calls(tool_calls: object) -> list[dict[str, Any]]:
             continue
         name = raw_name.strip().lower()
         if name not in SUPPORTED_CHAT_TOOLS:
+            logger.warning("Dropping tool call with unsupported name: %r", raw_name)
             continue
 
-        arguments = _normalize_tool_arguments(function.get("arguments"))
+        arguments = _normalize_tool_arguments(function.get("arguments"), tool_name=name)
         arguments = {
             key: value
             for key, value in arguments.items()
@@ -393,7 +394,14 @@ def _normalize_tool_calls(tool_calls: object) -> list[dict[str, Any]]:
                 arguments.pop("instructions")
         if not REQUIRED_CHAT_TOOL_ARGUMENTS[name].issubset(arguments):
             # Ollama models can occasionally emit a call that violates the
-            # advertised JSON schema. Do not surface an unusable action card.
+            # advertised JSON schema. Do not surface an unusable action card,
+            # but log it so a "the button never appeared" report is diagnosable.
+            missing = REQUIRED_CHAT_TOOL_ARGUMENTS[name] - arguments.keys()
+            logger.warning(
+                "Dropping '%s' tool call missing required arguments: %s",
+                name,
+                sorted(missing),
+            )
             continue
         normalized_function: dict[str, Any] = {
             "name": name,
@@ -417,13 +425,14 @@ def _normalize_tool_calls(tool_calls: object) -> list[dict[str, Any]]:
     return normalized
 
 
-def _normalize_tool_arguments(arguments: object) -> dict[str, Any]:
+def _normalize_tool_arguments(arguments: object, *, tool_name: str) -> dict[str, Any]:
     if isinstance(arguments, dict):
         return arguments
     if isinstance(arguments, str):
         try:
             parsed = json.loads(arguments)
         except json.JSONDecodeError:
+            logger.warning("Dropping '%s' tool call with malformed JSON arguments", tool_name)
             return {}
         if isinstance(parsed, dict):
             return parsed

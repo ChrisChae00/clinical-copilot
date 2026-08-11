@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
 
+if not WHISPERX_API_KEY:
+    raise RuntimeError(
+        "WHISPERX_API_KEY must be set; refusing to start with no shared secret"
+    )
+
 app = FastAPI(title="Ally WhisperX Service")
 
 api_key_header = APIKeyHeader(
@@ -40,9 +45,9 @@ _inference_lock = asyncio.Lock()
 async def require_service_api_key(
     api_key: str | None = Depends(api_key_header),
 ) -> None:
-    if api_key is None or not secrets.compare_digest(
-        api_key,
-        WHISPERX_API_KEY,
+    if api_key is None or not WHISPERX_API_KEY or not secrets.compare_digest(
+        api_key.encode("utf-8", errors="replace"),
+        WHISPERX_API_KEY.encode("utf-8"),
     ):
         raise HTTPException(
             status_code=401,

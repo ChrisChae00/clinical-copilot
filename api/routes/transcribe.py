@@ -87,11 +87,10 @@ async def transcribe(
         )
     }
 
-    headers = {
-        "CF-Access-Client-Id": WHISPERX_CF_ACCESS_CLIENT_ID,
-        "CF-Access-Client-Secret": WHISPERX_CF_ACCESS_CLIENT_SECRET,
-        "x-api-key": WHISPERX_API_KEY,
-    }
+    headers = {"x-api-key": WHISPERX_API_KEY}
+    if WHISPERX_CF_ACCESS_CLIENT_ID and WHISPERX_CF_ACCESS_CLIENT_SECRET:
+        headers["CF-Access-Client-Id"] = WHISPERX_CF_ACCESS_CLIENT_ID
+        headers["CF-Access-Client-Secret"] = WHISPERX_CF_ACCESS_CLIENT_SECRET
 
     timeout = httpx.Timeout(
         connect=10.0,
