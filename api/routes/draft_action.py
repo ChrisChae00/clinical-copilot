@@ -11,8 +11,9 @@ Request body:
     "title": "...",
     "description": "...",
     "details": {}
-  },
-  "context": {}  // optional patient EMR context (string or JSON object)
+   },
+  "context": {},  // optional patient EMR context (string or JSON object)
+  "images_b64": []  // optional report/document images to use as context
 }
 
 Response:
@@ -52,6 +53,7 @@ async def draft_action(request: Request):
 
     action = body.get("action")
     context = body.get("context")
+    images_b64 = body.get("images_b64")
 
     if not isinstance(action, dict):
         raise HTTPException(status_code=400, detail="action must be a JSON object")
@@ -69,11 +71,22 @@ async def draft_action(request: Request):
             detail="context must be a JSON object or string if provided",
         )
 
+    if images_b64 is not None and (
+        not isinstance(images_b64, list)
+        or not all(isinstance(image, str) for image in images_b64)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="images_b64 must be a list of strings if provided",
+        )
+
     prompt = _build_prompt(action, context)
 
     try:
         draft = await get_llm_response_str(
-            prompt=prompt, system_prompt=SYSTEM_PROMPT_DRAFT_ACTION
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT_DRAFT_ACTION,
+            images_b64=images_b64 or [],
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

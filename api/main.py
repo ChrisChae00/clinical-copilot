@@ -1,17 +1,4 @@
-"""
-Main API server for handling requests
-
-example request:
-
-POST http://localhost:8000/generate-str
-Content-Type: application/json
-X-API-Key: api-key-placeholder
-
-{
-  "prompt": "hi?"
-}
-
-"""
+"""FastAPI application for the Clinical Ally backend."""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

@@ -3,7 +3,8 @@
   "name": "Clinical Ally",
   "version": "0.1.0",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "description": "AI co-pilot sidebar for OpenEMR \u2014 runs entirely on localhost",
   "background": {

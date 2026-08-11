@@ -60,6 +60,8 @@
 
     requestAutofill(payload, timeoutMs = 300000) {
       return new Promise((resolve, reject) => {
+        const operationId = globalThis.crypto?.randomUUID?.()
+          || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
         const timer = setTimeout(() => {
           window.removeEventListener('message', handler);
           reject(new Error('Autofill response timed out.'));
@@ -68,6 +70,7 @@
         function handler(event) {
           if (event.source !== window.parent) return;
           if (event.data?.type !== 'AUTOFILL_RESPONSE') return;
+          if (event.data.operation_id !== operationId) return;
 
           clearTimeout(timer);
           window.removeEventListener('message', handler);
@@ -80,7 +83,11 @@
         }
 
         window.addEventListener('message', handler);
-        window.parent.postMessage({ type: 'REQUEST_AUTOFILL', ...payload }, '*');
+        window.parent.postMessage({
+          type: 'REQUEST_AUTOFILL',
+          ...payload,
+          operation_id: operationId,
+        }, '*');
       });
     }
 

@@ -472,9 +472,15 @@
           );
         });
     } else if (event.data.type === 'REQUEST_AUTOFILL') {
+      const operationId = event.data.operation_id;
       if (!window.AutofillManager) {
         iframe.contentWindow.postMessage(
-          { type: 'AUTOFILL_RESPONSE', ok: false, error: 'AutofillManager is unavailable.' },
+          {
+            type: 'AUTOFILL_RESPONSE',
+            operation_id: operationId,
+            ok: false,
+            error: 'AutofillManager is unavailable.',
+          },
           browser.runtime.getURL('')
         );
         return;
@@ -494,13 +500,18 @@
       runAutofill()
         .then((result) => {
           iframe.contentWindow.postMessage(
-            { type: 'AUTOFILL_RESPONSE', ok: true, result },
+            { type: 'AUTOFILL_RESPONSE', operation_id: operationId, ok: true, result },
             browser.runtime.getURL('')
           );
         })
         .catch((err) => {
           iframe.contentWindow.postMessage(
-            { type: 'AUTOFILL_RESPONSE', ok: false, error: err.message },
+            {
+              type: 'AUTOFILL_RESPONSE',
+              operation_id: operationId,
+              ok: false,
+              error: err.message,
+            },
             browser.runtime.getURL('')
           );
         });

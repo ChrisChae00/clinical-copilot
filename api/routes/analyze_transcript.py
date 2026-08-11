@@ -73,6 +73,9 @@ def _build_prompt(segments: list, context: object) -> str:
 
     if context:
         parts.append("\n\n### PATIENT CONTEXT ###\n")
-        parts.append(json.dumps(context, ensure_ascii=False, indent=2))
+        if isinstance(context, str):
+            parts.append(context)
+        else:
+            parts.append(json.dumps(context, ensure_ascii=False, indent=2))
 
     return "".join(parts)
