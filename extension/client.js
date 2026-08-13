@@ -14,9 +14,10 @@
       return this._request('/health');
     }
 
-    async chat({ prompt, context, raw_html, system_prompt, images_b64 } = {}) {
+    async chat({ prompt, messages, context, raw_html, system_prompt, images_b64 } = {}) {
       return this._postJson('/chat', {
         prompt,
+        messages,
         context,
         raw_html,
         system_prompt,
@@ -50,10 +51,11 @@
       });
     }
 
-    async draftAction({ action, context } = {}) {
+    async draftAction({ action, context, images_b64 } = {}) {
       return this._postJson('/draft-action', {
         action,
         context,
+        images_b64,
       });
     }
 

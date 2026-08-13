@@ -1,6 +1,10 @@
+# `docker compose up` alone only starts api-server, pointed at the remote
+# OLLAMA_URL / WHISPERX_URL from your .env (e.g. Cloudflare-Access-fronted
+# servers). To run Ollama and WhisperX in-container instead, opt in with:
+#   docker compose --profile local up
+# and set OLLAMA_URL=http://ollama:11434 / WHISPERX_URL=http://whisperx:8001
+# in .env (this is what .env.example ships by default).
 services:
-  # profile "local": run Ollama in-container (Mac / no GPU / Nvidia GPU).
-  # No profile (default): use a remote OLLAMA_URL instead — this service is skipped.
   ollama:
     image: ollama/ollama:latest
     container_name: ally-ollama
@@ -12,29 +16,58 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
+  whisperx:
+    build: ./whisperx-server
+    container_name: ally-whisperx
+    profiles: ["local"]
+    expose:
+      - "8001"
+    environment:
+      WHISPERX_API_KEY: ${WHISPERX_API_KEY}
+      WHISPERX_MODEL: ${WHISPERX_MODEL:-base}
+      WHISPERX_LANGUAGE: ${WHISPERX_LANGUAGE:-en}
+      WHISPERX_BATCH_SIZE: ${WHISPERX_BATCH_SIZE:-4}
+      WHISPERX_DIARIZE: ${WHISPERX_DIARIZE:-true}
+      HF_TOKEN: ${HF_TOKEN:-}
+      HF_HOME: /root/.cache/huggingface
+      TORCH_HOME: /root/.cache/torch
+    volumes:
+      - whisperx_models:/root/.cache/huggingface
+      - torch_models:/root/.cache/torch
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=5)"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   api-server:
     build: ./api
     container_name: ally-api
     ports:
       - "8000:8000"
-    env_file:
-      - ${ENV_FILE:-.env}
     environment:
       OLLAMA_URL: ${OLLAMA_URL}
       API_KEY: ${API_KEY}
       OLLAMA_MODEL: ${OLLAMA_MODEL}
       MAX_CONTEXT_LEN: ${MAX_CONTEXT_LEN}
       LLM_TIMEOUT: ${LLM_TIMEOUT:-300}
-      OLLAMA_CF_ACCESS_CLIENT_ID: ${OLLAMA_CF_ACCESS_CLIENT_ID}
-      OLLAMA_CF_ACCESS_CLIENT_SECRET: ${OLLAMA_CF_ACCESS_CLIENT_SECRET}
-      HF_TOKEN: ${HF_TOKEN:-}
-      HF_HOME: /root/.cache/huggingface
-      TORCH_HOME: /root/.cache/torch
+      OLLAMA_CF_ACCESS_CLIENT_ID: ${OLLAMA_CF_ACCESS_CLIENT_ID:-}
+      OLLAMA_CF_ACCESS_CLIENT_SECRET: ${OLLAMA_CF_ACCESS_CLIENT_SECRET:-}
+      WHISPERX_CF_ACCESS_CLIENT_ID: ${WHISPERX_CF_ACCESS_CLIENT_ID:-}
+      WHISPERX_CF_ACCESS_CLIENT_SECRET: ${WHISPERX_CF_ACCESS_CLIENT_SECRET:-}
+      WHISPERX_URL: ${WHISPERX_URL}
+      WHISPERX_API_KEY: ${WHISPERX_API_KEY}
+      WHISPERX_TIMEOUT: ${WHISPERX_TIMEOUT:-900}
     volumes:
       - ./api:/app
-      - whisperx_models:/root/.cache/huggingface
-      - torch_models:/root/.cache/torch
 
 volumes:
   ollama_data:

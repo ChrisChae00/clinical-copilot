@@ -30,7 +30,9 @@
         </div>
 
         <main id="panel-body">
-          <div id="response-area" aria-live="polite" aria-label="AI responses"></div>
+          <div id="response-area" aria-live="polite" aria-label="AI responses">
+            <div id="shared-history" aria-label="Shared conversation history"></div>
+          </div>
           <div id="spinner" class="spinner hidden" aria-label="Loading"></div>
         </main>
 
@@ -44,6 +46,16 @@
               <input id="include-screenshot-toggle" type="checkbox" />
               <span>Include current page screenshot</span>
             </label>
+            <button
+              id="conversation-btn"
+              class="record-control"
+              type="button"
+              aria-label="Transcribe a doctor-patient conversation"
+              aria-pressed="false"
+              title="Transcribe a doctor-patient conversation"
+            >
+              Transcribe conversation
+            </button>
           </div>
           <div id="image-preview-list" class="image-preview-list hidden" aria-label="Attached images"></div>
           <form id="prompt-form" autocomplete="off">
@@ -57,14 +69,15 @@
               >
                 +
               </button>
-              <input
+              <textarea
                 id="prompt-input"
-                type="text"
+                rows="1"
                 placeholder="Ask a clinical question&#x2026;"
-                aria-label="Clinical question"
+                aria-label="Clinical question. Press Enter to send or Shift plus Enter for a new line."
+                enterkeyhint="send"
                 autocomplete="off"
                 spellcheck="true"
-              />
+              ></textarea>
               <div id="recording-visualizer" class="hidden">
                 <div class="recording-wave">
                   <span class="bar bar1"></span>
@@ -73,14 +86,16 @@
                   <span class="bar bar4"></span>
                   <span class="bar bar5"></span>
                 </div>
-                <span class="recording-text">Recording started...</span>
+                <span id="recording-text" class="recording-text">Transcription started...</span>
                 <span id="recording-timer">00:00</span>
               </div>
               <button
-                id="voice-btn"
+                id="dictate-btn"
+                class="record-control"
                 type="button"
-                aria-label="Record voice input"
-                title="Record voice input"
+                aria-label="Dictate into the prompt"
+                aria-pressed="false"
+                title="Dictate into the prompt"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />

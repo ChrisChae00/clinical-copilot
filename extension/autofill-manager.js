@@ -49,7 +49,7 @@
     // - sends the fields and context to the API for fill suggestions
     // - applies the fills to the page and returns a summary of the results
     async autofill() {
-      const fields = this.parseFields();
+      let fields = this.parseFields();
       if (!fields.length) {
         return {
           fields,
@@ -60,7 +60,17 @@
         };
       }
 
+      const formSnapshot = JSON.stringify(fields);
       const response = await this.requestFills(fields);
+
+      // AJAX navigation can replace a form while the model is responding.
+      // Refresh all DOM references and require the model's field snapshot to
+      // still describe the exact form that is about to be mutated.
+      fields = this.parseFields();
+      if (JSON.stringify(fields) !== formSnapshot) {
+        throw new Error('The patient form changed before autofill could be applied.');
+      }
+
       const fills = Array.isArray(response?.fills) ? response.fills : [];
       const result = this.applyFills(fills);
 
@@ -177,6 +187,9 @@
           skipped.push({ field_id: fieldId || '', reason: 'Field was not found on the page.' });
           return;
         }
+        if (!this.isConnectedTarget(target)) {
+          throw new Error('The patient form changed before autofill could be applied.');
+        }
 
         try {
           const result = target.kind === 'radio'
@@ -200,6 +213,15 @@
       });
 
       return { applied, skipped };
+    }
+
+    isConnectedTarget(target) {
+      const controls = target?.control
+        ? [target.control]
+        : (Array.isArray(target?.controls) ? target.controls : []);
+      return controls.length > 0 && controls.every(
+        (control) => control?.ownerDocument === this.document && control.isConnected,
+      );
     }
 
     // finds the target controls for a given field id, using exact ID match, name match, or DOM query as needed

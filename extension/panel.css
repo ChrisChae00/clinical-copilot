@@ -97,6 +97,12 @@ body {
   gap: 10px;
 }
 
+#shared-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .message {
   padding: 8px 12px;
   border-radius: 8px;
@@ -161,34 +167,51 @@ body {
 #prompt-form {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .input-wrapper {
+  flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
-  width: 100%;
+  min-width: 0;
   padding: 4px;
   min-height: 44px;
 }
 
-#prompt-input {flex: 1;
+#prompt-input {
   min-width: 0;
+  flex: 1;
+  width: 100%;
   height: 36px;
+  min-height: 36px;
+  max-height: 40vh;
   border: 1px solid #ccc;
   border-radius: 18px;
-  padding: 0 12px;
+  padding: 7px 12px;
+  font: inherit;
+  line-height: 20px;
+  resize: none;
+  overflow-y: hidden;
+  overflow-wrap: anywhere;
 }
 
 #prompt-input:focus {
+  outline: none;
   border-color: #0066cc;
   box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
   background-color: #fff;
 }
 
-#voice-btn {
-  flex: 0 0 24px;
+#prompt-input:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+#attach-image-btn,
+#dictate-btn {
+  flex: 0 0 34px;
   width: 34px;
   height: 34px;
   aspect-ratio: 1 / 1;
@@ -201,22 +224,81 @@ body {
   border: none;
   border-radius: 50%;
   background-color: #f3f4f6;
-  color: none;
+  color: #4b5563;
 
   cursor: pointer;
   flex-shrink: 0;
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
 }
 
-#voice-btn:hover {
+#attach-image-btn {
+  font: inherit;
+  font-size: 21px;
+  line-height: 1;
+}
+
+#attach-image-btn:hover:not(:disabled),
+#dictate-btn:hover:not(:disabled) {
   color: #0066cc;
   background-color: rgba(0, 102, 204, 0.1);
 }
 
-#voice-btn.recording {
+#attach-image-btn:focus-visible,
+#dictate-btn:focus-visible,
+#conversation-btn:focus-visible,
+#send-btn:focus-visible {
+  outline: 2px solid #0066cc;
+  outline-offset: 2px;
+}
+
+.message-attachment-note {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.record-control.recording {
   color: #dc2626;
   background-color: #fee2e2;
   animation: mic-pulse 2.5s ease-in-out infinite;
+}
+
+.record-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+#chat-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.toggle-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #4b5563;
+}
+
+#conversation-btn {
+  margin-left: auto;
+  padding: 4px 9px;
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#conversation-btn:hover:not(:disabled) {
+  background: #dbeafe;
 }
 
 @keyframes mic-pulse {
@@ -230,6 +312,21 @@ body {
   align-self: flex-start;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.message.transcript.temp {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
+.message.transcript.partial {
+  background: #fffbeb;
+  border-color: #f59e0b;
+}
+
+.transcript-live-status {
+  color: #4b5563;
+  font-style: italic;
 }
 
 .transcript-line {
@@ -254,6 +351,22 @@ body {
   border: 1px solid #fca5a5;
   border-radius: 18px;
   overflow: hidden;
+}
+
+/* Dictation remains visible in the prompt as it arrives. Keep only the timer
+   beside it so the input still has useful width in the narrow side panel. */
+#recording-visualizer.dictation-status {
+  flex: 0 0 auto;
+  padding: 0 7px;
+}
+
+#recording-visualizer.dictation-status .recording-wave,
+#recording-visualizer.dictation-status .recording-text {
+  display: none;
+}
+
+#recording-visualizer.dictation-status #recording-timer {
+  margin: 0;
 }
 
 .recording-text {
@@ -359,6 +472,10 @@ body {
   line-height: 1.5;
 }
 
+.stale-action-suggestions {
+  opacity: 0.55;
+}
+
 .action-copy-btn {
   align-self: flex-end;
   font-size: 11px;
@@ -375,6 +492,7 @@ body {
 
 #send-btn {
   flex: 0 0 auto;
+  align-self: flex-end;
   height: 36px;
   padding: 0 16px;
   background: #0066cc;
