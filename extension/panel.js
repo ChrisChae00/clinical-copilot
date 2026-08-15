@@ -286,26 +286,31 @@ async function sendAudioForTranscription(blob) {
 }
 
 // Extracts patient/clinical info mentioned during the conversation into the
-// accumulated context, then always offers an autofill suggestion so the user
-// can enter whatever was picked up (eg. "the patient has diabetes") into the
-// form with one click, without needing to ask for it explicitly.
+// accumulated context, then offers an autofill suggestion only if that
+// extraction actually turned up something new — so the user can enter it
+// into the form with one click, without needing to ask for it explicitly.
 async function syncTranscriptToContext(segments) {
   const transcriptText = segments.map(({ speaker, text }) => `${speaker}: ${text}`).join('\n');
   if (!transcriptText.trim()) return;
 
+  const chatContext = await resolveChatContext();
+  let updated_context;
   try {
-    const chatContext = await resolveChatContext();
-    const { updated_context } = await client.chat({
+    ({ updated_context } = await client.chat({
       prompt: 'Extract any new patient or clinical information (diagnoses, symptoms, '
         + 'medications, allergies, vitals, history, etc.) mentioned in this conversation '
         + 'transcript and incorporate it into the accumulated context.\n\n'
         + '### CONVERSATION TRANSCRIPT ###\n' + transcriptText,
       context: chatContext || undefined,
-    });
-    if (updated_context) contextManager.setContext(updated_context);
+    }));
   } catch (err) {
     appendMessage(`Could not extract context from transcript: ${err.message}`, 'error');
+    return;
   }
+
+  // Nothing new extracted (context unchanged) — don't prompt for autofill.
+  if (!updated_context || updated_context === chatContext) return;
+  contextManager.setContext(updated_context);
 
   const container = document.createElement('div');
   container.className = 'message assistant action-suggestions';
