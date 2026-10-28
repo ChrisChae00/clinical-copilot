@@ -189,5 +189,3 @@ The content script only injects on URLs matching `extension/manifest.json`'s
 1. Edit `extension/manifest.json`, widen `matches` to `["*://localhost/*", "*://localhost:*/*"]`
 2. Reload the add-on in `about:debugging`
 3. Open `http://localhost:8000/docs` — the sidebar now injects there too
-
-> Revert the `matches` change before committing.
